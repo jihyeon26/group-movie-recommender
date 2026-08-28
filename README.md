@@ -75,6 +75,25 @@ Generated artifacts are written under `outputs/processed_movielens32m/` and incl
 - `dissimilar_pairs.csv.gz`
 - `manifest.json`
 
+## Run the popularity baseline
+
+After preprocessing, generate one shared Top-10 list per pair and evaluate it:
+
+```powershell
+python scripts/evaluate_popularity.py
+```
+
+The ignored `outputs/popularity_baseline/` directory will contain:
+
+- `recommendations.csv.gz`
+- `pair_metrics.csv.gz`
+- `metrics.json`
+
+The baseline ranks warm movies by positive training-interaction count and removes
+movies already observed by either group member. The same list is evaluated against
+each member's eligible test positives. See
+`notebooks/01_popularity_and_metrics_walkthrough.ipynb` for a small worked example.
+
 ## Preprocessing definition
 
 - Ratings of at least 4.0 are positive interactions.
