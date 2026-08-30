@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from group_movie_recommender.algorithms.graph_data import (
+    BPRBatchSampler,
     build_bipartite_graph,
     positive_movie_sets,
     sample_bpr_batch,
@@ -54,6 +55,16 @@ class GraphDataTests(unittest.TestCase):
         duplicated = pd.concat([self.edges, self.edges.iloc[[0]]], ignore_index=True)
         graph = build_bipartite_graph(duplicated)
         self.assertEqual(graph.num_positive_edges, 5)
+
+    def test_training_sampler_advances_reproducibly(self) -> None:
+        graph = build_bipartite_graph(self.edges)
+        first_sampler = BPRBatchSampler(graph, random_seed=19)
+        second_sampler = BPRBatchSampler(graph, random_seed=19)
+        first_sequence = [first_sampler.sample(batch_size=8) for _ in range(2)]
+        second_sequence = [second_sampler.sample(batch_size=8) for _ in range(2)]
+
+        pd.testing.assert_frame_equal(first_sequence[0], second_sequence[0])
+        pd.testing.assert_frame_equal(first_sequence[1], second_sequence[1])
 
 
 if __name__ == "__main__":

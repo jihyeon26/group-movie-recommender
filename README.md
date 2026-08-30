@@ -10,7 +10,9 @@ This repository contains the reproducible preprocessing foundation for a conflic
 │   └── preprocessing.json       # Reproducible split and filtering thresholds
 ├── scripts/
 │   ├── check_data.py            # Schema, missing-data, duplicate, and integrity checks
-│   └── prepare_data.py          # Split, graph, catalogue, pair, and export pipeline
+│   ├── prepare_data.py          # Split, graph, catalogue, pair, and export pipeline
+│   ├── evaluate_popularity.py   # Baseline recommendations and evaluation
+│   └── train_lightgcn_toy.py    # CPU learning sanity check
 ├── src/group_movie_recommender/
 │   ├── preprocessing/           # Validation, splitting, sampling, and pair construction
 │   │   ├── config.py            # Typed preprocessing configuration
@@ -24,13 +26,15 @@ This repository contains the reproducible preprocessing foundation for a conflic
 │   ├── algorithms/              # Recommendation and scoring algorithms
 │   │   ├── graph_data.py        # Graph indexing and BPR negative sampling
 │   │   ├── group_ranking.py     # Average and conflict-aware aggregation
+│   │   ├── lightgcn.py          # Trainable PyTorch LightGCN
 │   │   ├── lightgcn_math.py     # Propagation, scoring, and BPR loss mathematics
 │   │   └── popularity.py        # Non-personalized popularity baseline
 │   ├── evaluation/              # Offline group evaluation
 │   │   ├── diagnostics.py       # Held-out joint-relevance diagnostics
 │   │   └── metrics.py           # Member and shared-list ranking metrics
 │   ├── pipelines/
-│   │   └── preprocessing.py     # End-to-end preprocessing orchestration
+│   │   ├── preprocessing.py     # End-to-end preprocessing orchestration
+│   │   └── lightgcn_training.py # Small-graph mini-batch optimization
 │   └── shared/
 │       └── io.py                # Memory-aware MovieLens I/O
 ├── tests/                       # Small deterministic unit tests
@@ -61,6 +65,12 @@ Using `uv`:
 ```powershell
 uv venv
 uv pip install -e ".[dev]"
+```
+
+Install the optional PyTorch training dependency when working on LightGCN:
+
+```powershell
+uv pip install -e ".[training,dev]"
 ```
 
 Activate the environment or select `.venv/Scripts/python.exe` as the notebook kernel.
@@ -118,7 +128,9 @@ personalized model is introduced.
 
 `notebooks/03_graph_data_walkthrough.ipynb` converts original MovieLens IDs into
 contiguous user and movie indices, constructs the undirected bipartite `edge_index`,
-and samples reproducible BPR triples whose negative movies are unseen by the user.
+and samples reproducible BPR triples whose negatives are absent from the user's
+positive training graph. Such movies can be unrated or rated below four; they are
+not confirmed dislikes. Validation/test feedback is never used to sample them.
 
 ## Understand LightGCN mathematics
 
@@ -126,6 +138,32 @@ and samples reproducible BPR triples whose negative movies are unseen by the use
 normalization, neighbor propagation, layer averaging, dot-product scoring, and BPR
 loss with NumPy. It exposes the model mathematics before adding automatic
 differentiation and a full training loop.
+
+## Run the toy LightGCN trainer
+
+The PyTorch learning check uses a synthetic graph and is not a validation result:
+
+```powershell
+python scripts/train_lightgcn_toy.py
+```
+
+Its ignored output contains the fixed training-batch loss before and after 100
+updates. `notebooks/05_lightgcn_training_walkthrough.ipynb` explains embedding
+parameters, automatic differentiation, optimization, and full-catalog scoring.
+
+For the local verification, the broken existing `.venv` was preserved and a separate
+CPU environment was created at `tmp/lightgcn-venv`. Select its
+`Scripts/python.exe` as the notebook interpreter, or run:
+
+```powershell
+& .\tmp\lightgcn-venv\Scripts\python.exe scripts/train_lightgcn_toy.py
+```
+
+The prototype performs full-graph propagation at every optimization step. It has
+not yet been profiled or tuned for MovieLens 32M, and does not perform validation
+selection or test evaluation. See the official
+[PyTorch sparse matrix multiplication documentation](https://docs.pytorch.org/docs/stable/generated/torch.sparse.mm.html)
+for the differentiable propagation operation used here.
 
 ## Preprocessing definition
 
