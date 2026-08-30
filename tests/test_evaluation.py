@@ -8,6 +8,7 @@ import unittest
 import pandas as pd
 
 from group_movie_recommender.evaluation.metrics import (
+    build_pair_relevant_item_sets,
     build_relevant_item_sets,
     evaluate_shared_rankings,
     ndcg_at_k,
@@ -57,6 +58,14 @@ class EvaluationTests(unittest.TestCase):
         )
         result = build_relevant_item_sets(positives, {10, 20})
         self.assertEqual(result, {1: {10}, 2: {20}})
+
+    def test_pair_relevance_removes_items_seen_by_the_partner(self) -> None:
+        pairs = pd.DataFrame({"pairId": [4], "userA": [1], "userB": [2]})
+        positives = pd.DataFrame({"userId": [1, 1, 2], "movieId": [10, 20, 20]})
+        seen = {1: set(), 2: {10}}
+        result = build_pair_relevant_item_sets(pairs, positives, {10, 20}, seen)
+        self.assertEqual(result[(4, 1)], {20})
+        self.assertEqual(result[(4, 2)], {20})
 
 
 if __name__ == "__main__":
