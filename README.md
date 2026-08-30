@@ -22,6 +22,7 @@ This repository contains the reproducible preprocessing foundation for a conflic
 │   │   ├── candidates.py        # Shared warm, unseen candidate sets
 │   │   └── catalog.py           # Positive graph and warm-item filtering
 │   ├── algorithms/              # Recommendation and scoring algorithms
+│   │   ├── graph_data.py        # Graph indexing and BPR negative sampling
 │   │   ├── group_ranking.py     # Average and conflict-aware aggregation
 │   │   └── popularity.py        # Non-personalized popularity baseline
 │   ├── evaluation/              # Offline group evaluation
@@ -111,6 +112,12 @@ each member's eligible test positives. See
 conflict-aware aggregation on three inspectable candidate movies. It shows how the
 conflict weight changes the shared ranking and the minimum-member metric before a
 personalized model is introduced.
+
+## Understand the graph input
+
+`notebooks/03_graph_data_walkthrough.ipynb` converts original MovieLens IDs into
+contiguous user and movie indices, constructs the undirected bipartite `edge_index`,
+and samples reproducible BPR triples whose negative movies are unseen by the user.
 
 ## Preprocessing definition
 
