@@ -12,12 +12,14 @@ This repository contains the reproducible preprocessing foundation for a conflic
 │   ├── check_data.py            # Schema, missing-data, duplicate, and integrity checks
 │   ├── prepare_data.py          # Split, graph, catalogue, pair, and export pipeline
 │   ├── evaluate_popularity.py   # Baseline recommendations and evaluation
+│   ├── train_lightgcn_subset.py # Controlled MovieLens integration run
 │   └── train_lightgcn_toy.py    # CPU learning sanity check
 ├── src/group_movie_recommender/
 │   ├── preprocessing/           # Validation, splitting, sampling, and pair construction
 │   │   ├── config.py            # Typed preprocessing configuration
 │   │   ├── data_check.py        # Source data validation and cleaning
 │   │   ├── pairing.py           # Training-only synthetic pair construction
+│   │   ├── graph_subset.py      # Reproducible focus/context user subsets
 │   │   ├── sampling.py          # Sparse-profile interaction sampling
 │   │   └── splitting.py         # Temporal split and user cohorts
 │   ├── filtering/               # Warm catalogue and pair candidate filtering
@@ -39,6 +41,7 @@ This repository contains the reproducible preprocessing foundation for a conflic
 │       └── io.py                # Memory-aware MovieLens I/O
 ├── tests/                       # Small deterministic unit tests
 ├── outputs/                     # Generated files; ignored except for .gitkeep
+├── app.py                       # Two-person rating and recommendation interface
 └── exploration/                 # Local exploratory notebooks; fully ignored
 ```
 
@@ -74,6 +77,37 @@ uv pip install -e ".[training,dev]"
 ```
 
 Activate the environment or select `.venv/Scripts/python.exe` as the notebook kernel.
+
+## Rate movies and get a group recommendation
+
+The Streamlit app lets two new people rate a small, genre-diverse set drawn from
+popular MovieLens 32M titles. Install the app dependency after preparing the data:
+
+```powershell
+uv pip install -e ".[app]"
+streamlit run app.py
+```
+
+Each person can skip unseen titles, move through three sets of popular movies, or
+search the complete MovieLens catalogue. There is no minimum number of ratings:
+
+- With no ratings, recommendations fall back to popular warm movies.
+- With a few ratings, a regularized genre profile is blended with popularity.
+- As more ratings arrive, personal taste receives more weight.
+- Movies rated by either member are removed from the shared candidate list.
+- The existing conflict-aware ranker balances average satisfaction with the
+  lower-scoring member, controlled by the app's compromise slider.
+
+The download button exports `userId,movieId,rating,timestamp`, matching the
+MovieLens ratings schema. Reserved positive user IDs `1000000001` and `1000000002`
+distinguish the two new members without colliding with MovieLens 32M users. "Not
+seen" choices are missing data and are never exported as dislikes.
+
+This cold-start layer is needed because a new visitor has no node or learned
+embedding in the current LightGCN graph. Keep exported live ratings separate from
+the historical offline benchmark until a retraining and time-split policy is
+defined. The interactive recommendation uses the sparse profile and the already
+produced training-only `warm_movies.csv.gz` catalogue.
 
 ## Run the pipeline
 
@@ -164,6 +198,21 @@ not yet been profiled or tuned for MovieLens 32M, and does not perform validatio
 selection or test evaluation. See the official
 [PyTorch sparse matrix multiplication documentation](https://docs.pytorch.org/docs/stable/generated/torch.sparse.mm.html)
 for the differentiable propagation operation used here.
+
+## Run the controlled MovieLens subset
+
+After preprocessing, run a bounded real-data integration check:
+
+```powershell
+python scripts/train_lightgcn_subset.py
+```
+
+The default configuration retains the users in 25 selected pairs and samples
+context users to a total of 500. It exports original IDs with final embeddings so
+future scoring does not confuse MovieLens IDs with matrix row indices. The run is
+explained in `notebooks/06_movielens_subset_walkthrough.ipynb`. Its training loss is
+not used as a model-selection metric and its subset results are not comparable to
+the full-catalogue popularity baseline.
 
 ## Preprocessing definition
 
