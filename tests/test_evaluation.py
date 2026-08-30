@@ -7,7 +7,7 @@ import unittest
 
 import pandas as pd
 
-from group_movie_recommender.evaluation import (
+from group_movie_recommender.evaluation.metrics import (
     build_relevant_item_sets,
     evaluate_shared_rankings,
     ndcg_at_k,

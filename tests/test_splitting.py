@@ -7,8 +7,8 @@ import unittest
 
 import pandas as pd
 
-from group_movie_recommender.config import PreprocessingConfig
-from group_movie_recommender.splitting import (
+from group_movie_recommender.preprocessing.config import PreprocessingConfig
+from group_movie_recommender.preprocessing.splitting import (
     add_temporal_split,
     select_evaluation_users,
     select_training_users,
@@ -56,4 +56,3 @@ class SplittingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

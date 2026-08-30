@@ -1,4 +1,4 @@
-"""Data-quality checks for the MovieLens source tables."""
+"""Data-quality checks and tag cleaning for the MovieLens source tables."""
 
 from __future__ import annotations
 
@@ -114,4 +114,3 @@ def validation_summary(report: dict[str, Any]) -> pd.DataFrame:
         {"check": "missing_tag_text", "value": report["missing"]["tags"]["tag"]["count"]},
     ]
     return pd.DataFrame(rows)
-

@@ -1,4 +1,4 @@
-"""Memory-aware input and output helpers for MovieLens 32M."""
+"""Shared, memory-aware input and output helpers for MovieLens 32M."""
 
 from __future__ import annotations
 

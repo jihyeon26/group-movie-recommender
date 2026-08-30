@@ -6,8 +6,8 @@ import unittest
 
 import pandas as pd
 
-from group_movie_recommender.config import PreprocessingConfig
-from group_movie_recommender.pairing import select_dissimilar_pairs
+from group_movie_recommender.preprocessing.config import PreprocessingConfig
+from group_movie_recommender.preprocessing.pairing import select_dissimilar_pairs
 
 
 class PairingTests(unittest.TestCase):

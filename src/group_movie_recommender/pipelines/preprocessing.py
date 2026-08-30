@@ -7,18 +7,18 @@ from typing import Any
 
 import pandas as pd
 
-from .candidates import add_joint_test_counts
-from .config import PreprocessingConfig
-from .filtering import (
+from ..evaluation.diagnostics import add_joint_test_counts
+from ..preprocessing.config import PreprocessingConfig
+from ..filtering.catalog import (
     build_warm_catalog,
     filter_edges_to_catalog,
     positive_events,
     positive_training_edges,
     warm_event_coverage,
 )
-from .io import load_movies, load_ratings, write_csv_gzip, write_json
-from .pairing import sample_pair_features, select_dissimilar_pairs
-from .splitting import (
+from ..shared.io import load_movies, load_ratings, write_csv_gzip, write_json
+from ..preprocessing.pairing import sample_pair_features, select_dissimilar_pairs
+from ..preprocessing.splitting import (
     add_temporal_split,
     select_evaluation_users,
     select_training_users,

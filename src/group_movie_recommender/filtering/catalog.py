@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .config import PreprocessingConfig
+from ..preprocessing.config import PreprocessingConfig
 
 
 def positive_training_edges(

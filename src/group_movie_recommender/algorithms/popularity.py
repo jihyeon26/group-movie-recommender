@@ -1,4 +1,4 @@
-"""A transparent non-personalized popularity recommender."""
+"""Popularity scoring and shared-list recommendation for two-user groups."""
 
 from __future__ import annotations
 

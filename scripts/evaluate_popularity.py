@@ -14,16 +14,16 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from group_movie_recommender.candidates import build_seen_item_sets
-from group_movie_recommender.config import PreprocessingConfig
-from group_movie_recommender.evaluation import (
+from group_movie_recommender.filtering.candidates import build_seen_item_sets
+from group_movie_recommender.preprocessing.config import PreprocessingConfig
+from group_movie_recommender.evaluation.metrics import (
     build_relevant_item_sets,
     evaluate_shared_rankings,
 )
-from group_movie_recommender.filtering import positive_events
-from group_movie_recommender.io import load_ratings, write_csv_gzip, write_json
-from group_movie_recommender.popularity import recommend_pairs_by_popularity
-from group_movie_recommender.splitting import add_temporal_split
+from group_movie_recommender.filtering.catalog import positive_events
+from group_movie_recommender.shared.io import load_ratings, write_csv_gzip, write_json
+from group_movie_recommender.algorithms.popularity import recommend_pairs_by_popularity
+from group_movie_recommender.preprocessing.splitting import add_temporal_split
 
 
 def parse_args() -> argparse.Namespace:

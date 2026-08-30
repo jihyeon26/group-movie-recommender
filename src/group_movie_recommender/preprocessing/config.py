@@ -58,4 +58,3 @@ class PreprocessingConfig:
         """Return the exclusive UTC validation cutoff as epoch seconds."""
 
         return self._utc_timestamp(self.validation_end)
-
