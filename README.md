@@ -22,6 +22,7 @@ This repository contains the reproducible preprocessing foundation for a conflic
 │   │   ├── candidates.py        # Shared warm, unseen candidate sets
 │   │   └── catalog.py           # Positive graph and warm-item filtering
 │   ├── algorithms/              # Recommendation and scoring algorithms
+│   │   ├── group_ranking.py     # Average and conflict-aware aggregation
 │   │   └── popularity.py        # Non-personalized popularity baseline
 │   ├── evaluation/              # Offline group evaluation
 │   │   ├── diagnostics.py       # Held-out joint-relevance diagnostics
@@ -103,6 +104,13 @@ The baseline ranks warm movies by positive training-interaction count and remove
 movies already observed by either group member. The same list is evaluated against
 each member's eligible test positives. See
 `notebooks/01_popularity_and_metrics_walkthrough.ipynb` for a small worked example.
+
+## Understand group ranking
+
+`notebooks/02_group_ranking_walkthrough.ipynb` compares average aggregation with
+conflict-aware aggregation on three inspectable candidate movies. It shows how the
+conflict weight changes the shared ranking and the minimum-member metric before a
+personalized model is introduced.
 
 ## Preprocessing definition
 
