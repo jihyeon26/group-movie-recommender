@@ -51,7 +51,7 @@ def batch_to_tensors(batch: pd.DataFrame) -> tuple[torch.Tensor, ...]:
     )
 
 
-def train_small_graph(
+def train_lightgcn(
     graph: BipartiteGraphData,
     config: LightGCNTrainingConfig,
 ) -> tuple[LightGCN, pd.DataFrame]:
@@ -93,3 +93,12 @@ def train_small_graph(
         })
     model.eval()
     return model, pd.DataFrame(rows)
+
+
+def train_small_graph(
+    graph: BipartiteGraphData,
+    config: LightGCNTrainingConfig,
+) -> tuple[LightGCN, pd.DataFrame]:
+    """Backward-compatible name for the educational small-graph trainer."""
+
+    return train_lightgcn(graph, config)

@@ -52,6 +52,31 @@ class BipartiteGraphData:
 
         return self.movie_ids[np.asarray(movie_indices, dtype=np.int64)]
 
+    def user_indices(self, original_user_ids: np.ndarray) -> np.ndarray:
+        """Encode MovieLens user IDs and reject users outside this graph."""
+
+        return _encode_sorted_ids(self.user_ids, original_user_ids, name="userId")
+
+    def movie_indices(self, original_movie_ids: np.ndarray) -> np.ndarray:
+        """Encode MovieLens movie IDs and reject movies outside this graph."""
+
+        return _encode_sorted_ids(self.movie_ids, original_movie_ids, name="movieId")
+
+
+def _encode_sorted_ids(
+    known_ids: np.ndarray,
+    requested_ids: np.ndarray,
+    *,
+    name: str,
+) -> np.ndarray:
+    requested = np.asarray(requested_ids, dtype=np.int64)
+    positions = np.searchsorted(known_ids, requested)
+    valid = positions < len(known_ids)
+    valid[valid] &= known_ids[positions[valid]] == requested[valid]
+    if not valid.all():
+        raise KeyError(f"Unknown {name} values: {requested[~valid].tolist()}")
+    return positions.astype(np.int64)
+
 
 def build_bipartite_graph(train_edges: pd.DataFrame) -> BipartiteGraphData:
     """Map positive train edges to contiguous user and movie node indices."""
