@@ -1,4 +1,4 @@
-"""Ranking metrics for a shared recommendation list shown to two users."""
+"""Relevance sets and ranking metrics for shared two-user recommendation lists."""
 
 from __future__ import annotations
 

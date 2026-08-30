@@ -96,4 +96,3 @@ def select_evaluation_users(
         & (user_statistics["test_positives"] >= config.evaluation_min_test_positives)
     )
     return user_statistics.loc[mask, "userId"].to_numpy(dtype=np.int32)
-

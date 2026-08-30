@@ -12,14 +12,24 @@ This repository contains the reproducible preprocessing foundation for a conflic
 │   ├── check_data.py            # Schema, missing-data, duplicate, and integrity checks
 │   └── prepare_data.py          # Split, graph, catalogue, pair, and export pipeline
 ├── src/group_movie_recommender/
-│   ├── candidates.py            # Pair candidate sets and sparse-profile helpers
-│   ├── config.py                # Typed preprocessing configuration
-│   ├── data_check.py            # Source data validation
-│   ├── filtering.py             # Positive graph and warm-item filtering
-│   ├── io.py                    # Memory-aware MovieLens I/O
-│   ├── pairing.py               # Training-only synthetic pair construction
-│   ├── pipeline.py              # End-to-end preprocessing orchestration
-│   └── splitting.py             # Temporal split and user cohorts
+│   ├── preprocessing/           # Validation, splitting, sampling, and pair construction
+│   │   ├── config.py            # Typed preprocessing configuration
+│   │   ├── data_check.py        # Source data validation and cleaning
+│   │   ├── pairing.py           # Training-only synthetic pair construction
+│   │   ├── sampling.py          # Sparse-profile interaction sampling
+│   │   └── splitting.py         # Temporal split and user cohorts
+│   ├── filtering/               # Warm catalogue and pair candidate filtering
+│   │   ├── candidates.py        # Shared warm, unseen candidate sets
+│   │   └── catalog.py           # Positive graph and warm-item filtering
+│   ├── algorithms/              # Recommendation and scoring algorithms
+│   │   └── popularity.py        # Non-personalized popularity baseline
+│   ├── evaluation/              # Offline group evaluation
+│   │   ├── diagnostics.py       # Held-out joint-relevance diagnostics
+│   │   └── metrics.py           # Member and shared-list ranking metrics
+│   ├── pipelines/
+│   │   └── preprocessing.py     # End-to-end preprocessing orchestration
+│   └── shared/
+│       └── io.py                # Memory-aware MovieLens I/O
 ├── tests/                       # Small deterministic unit tests
 ├── outputs/                     # Generated files; ignored except for .gitkeep
 └── exploration/                 # Local exploratory notebooks; fully ignored

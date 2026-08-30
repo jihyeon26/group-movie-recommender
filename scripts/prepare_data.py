@@ -11,8 +11,8 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from group_movie_recommender.config import PreprocessingConfig
-from group_movie_recommender.pipeline import run_preprocessing
+from group_movie_recommender.preprocessing.config import PreprocessingConfig
+from group_movie_recommender.pipelines.preprocessing import run_preprocessing
 
 
 def parse_args() -> argparse.Namespace:
@@ -48,4 +48,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -7,14 +7,17 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from group_movie_recommender.candidates import (
-    add_joint_test_counts,
+from group_movie_recommender.filtering.candidates import (
     build_seen_item_sets,
     candidate_movies_for_pair,
-    keep_first_k_interactions,
 )
-from group_movie_recommender.config import PreprocessingConfig
-from group_movie_recommender.filtering import build_warm_catalog, filter_edges_to_catalog
+from group_movie_recommender.evaluation.diagnostics import add_joint_test_counts
+from group_movie_recommender.preprocessing.config import PreprocessingConfig
+from group_movie_recommender.preprocessing.sampling import keep_first_k_interactions
+from group_movie_recommender.filtering.catalog import (
+    build_warm_catalog,
+    filter_edges_to_catalog,
+)
 
 
 class FilteringAndCandidateTests(unittest.TestCase):
@@ -64,4 +67,3 @@ class FilteringAndCandidateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

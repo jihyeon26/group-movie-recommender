@@ -6,7 +6,7 @@ import unittest
 
 import pandas as pd
 
-from group_movie_recommender.popularity import (
+from group_movie_recommender.algorithms.popularity import (
     PopularityRecommender,
     recommend_pairs_by_popularity,
 )

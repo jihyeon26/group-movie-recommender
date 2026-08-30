@@ -192,4 +192,3 @@ def select_dissimilar_pairs(
         "max_pairs_per_user": config.max_pairs_per_user,
     }
     return selected, summary
-
