@@ -73,7 +73,15 @@ def main() -> None:
         movie_ids=subset.graph.movie_ids,
         movie_embeddings=movie_embeddings.cpu().numpy(),
     )
+    subset_catalog = (
+        subset.positive_edges.groupby("movieId")
+        .size()
+        .rename("trainPositiveCount")
+        .sort_values(ascending=False)
+        .reset_index()
+    )
     write_csv_gzip(subset.pairs, args.output_dir / "focus_pairs.csv.gz")
+    write_csv_gzip(subset_catalog, args.output_dir / "training_catalog.csv.gz")
     write_csv_gzip(history, args.output_dir / "training_history.csv.gz")
     initial = float(history.iloc[0]["fixed_training_bpr_loss"])
     final = float(history.iloc[-1]["fixed_training_bpr_loss"])

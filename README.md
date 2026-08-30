@@ -12,6 +12,7 @@ This repository contains the reproducible preprocessing foundation for a conflic
 │   ├── check_data.py            # Schema, missing-data, duplicate, and integrity checks
 │   ├── prepare_data.py          # Split, graph, catalogue, pair, and export pipeline
 │   ├── evaluate_popularity.py   # Baseline recommendations and evaluation
+│   ├── evaluate_lightgcn_subset.py # Validation ranking integration check
 │   ├── train_lightgcn_subset.py # Controlled MovieLens integration run
 │   └── train_lightgcn_toy.py    # CPU learning sanity check
 ├── src/group_movie_recommender/
@@ -26,6 +27,7 @@ This repository contains the reproducible preprocessing foundation for a conflic
 │   │   ├── candidates.py        # Shared warm, unseen candidate sets
 │   │   └── catalog.py           # Positive graph and warm-item filtering
 │   ├── algorithms/              # Recommendation and scoring algorithms
+│   │   ├── embedding_inference.py # Full-catalogue scores from saved embeddings
 │   │   ├── graph_data.py        # Graph indexing and BPR negative sampling
 │   │   ├── group_ranking.py     # Average and conflict-aware aggregation
 │   │   ├── lightgcn.py          # Trainable PyTorch LightGCN
@@ -213,6 +215,27 @@ future scoring does not confuse MovieLens IDs with matrix row indices. The run i
 explained in `notebooks/06_movielens_subset_walkthrough.ipynb`. Its training loss is
 not used as a model-selection metric and its subset results are not comparable to
 the full-catalogue popularity baseline.
+
+## Evaluate subset rankings
+
+After the controlled subset trainer has exported its embeddings, compare popularity,
+LightGCN average aggregation, and several conflict penalties on validation data:
+
+```powershell
+python scripts/evaluate_lightgcn_subset.py
+```
+
+Every method receives the same subset catalogue and removes the union of the two
+members' training histories. Validation positives are used only as labels. Relevance
+is pair-specific: if one member has already seen a movie, that movie is unavailable
+to the pair and is removed from both members' relevance denominators.
+
+The ignored `outputs/lightgcn_subset_validation/` directory contains ranked lists,
+per-pair metrics, and a JSON report. The report selects among the personalized
+methods by minimum-member NDCG@10 and uses average NDCG@10 only as a tie-breaker.
+`notebooks/07_validation_ranking_walkthrough.ipynb` explains the comparison and its
+limitations. In particular, a small integration run with all methods tied at zero
+on the primary metric cannot support a claim that one aggregation method is better.
 
 ## Preprocessing definition
 

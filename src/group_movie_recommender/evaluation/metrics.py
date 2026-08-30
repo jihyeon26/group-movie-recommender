@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 import numpy as np
 import pandas as pd
@@ -69,9 +69,31 @@ def build_relevant_item_sets(
     }
 
 
+def build_pair_relevant_item_sets(
+    pairs: pd.DataFrame,
+    positive_events: pd.DataFrame,
+    eligible_movie_ids: set[int],
+    seen_items: dict[int, set[int]],
+) -> dict[tuple[int, int], set[int]]:
+    """Build relevance after applying each pair's union-of-seen candidate rule."""
+
+    positive_sets = build_relevant_item_sets(positive_events, eligible_movie_ids)
+    result: dict[tuple[int, int], set[int]] = {}
+    for fallback_pair_id, row in enumerate(pairs.itertuples(index=False)):
+        pair_id = int(getattr(row, "pairId", fallback_pair_id))
+        user_a = int(row.userA)
+        user_b = int(row.userB)
+        available = eligible_movie_ids - (
+            seen_items.get(user_a, set()) | seen_items.get(user_b, set())
+        )
+        result[(pair_id, user_a)] = positive_sets.get(user_a, set()) & available
+        result[(pair_id, user_b)] = positive_sets.get(user_b, set()) & available
+    return result
+
+
 def evaluate_shared_rankings(
     recommendations: pd.DataFrame,
-    relevant_items: dict[int, set[int]],
+    relevant_items: Mapping[int | tuple[int, int], set[int]],
     *,
     catalog_size: int,
     k: int = 10,
@@ -95,8 +117,12 @@ def evaluate_shared_rankings(
         first = group.iloc[0]
         user_a = int(first["userA"])
         user_b = int(first["userB"])
-        positives_a = relevant_items.get(user_a, set())
-        positives_b = relevant_items.get(user_b, set())
+        positives_a = relevant_items.get(
+            (int(pair_id), user_a), relevant_items.get(user_a, set())
+        )
+        positives_b = relevant_items.get(
+            (int(pair_id), user_b), relevant_items.get(user_b, set())
+        )
 
         if not positives_a or not positives_b:
             skipped_pairs += 1
