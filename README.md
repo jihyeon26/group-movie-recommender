@@ -13,6 +13,7 @@ This repository contains the reproducible preprocessing foundation for a conflic
 │   ├── prepare_data.py          # Split, graph, catalogue, pair, and export pipeline
 │   ├── evaluate_popularity.py   # Baseline recommendations and evaluation
 │   ├── evaluate_lightgcn_subset.py # Validation ranking integration check
+│   ├── run_lightgcn_scale_experiment.py # Staged scale diagnostics
 │   ├── train_lightgcn_subset.py # Controlled MovieLens integration run
 │   └── train_lightgcn_toy.py    # CPU learning sanity check
 ├── src/group_movie_recommender/
@@ -236,6 +237,30 @@ methods by minimum-member NDCG@10 and uses average NDCG@10 only as a tie-breaker
 `notebooks/07_validation_ranking_walkthrough.ipynb` explains the comparison and its
 limitations. In particular, a small integration run with all methods tied at zero
 on the primary metric cannot support a claim that one aggregation method is better.
+
+## Scale the validation experiment deliberately
+
+The scale runner separates three possible causes of sparse Top-10 results: catalogue
+coverage, number of evaluated pairs, and training duration. Its default runs only
+the inexpensive smoke stage:
+
+```powershell
+python scripts/run_lightgcn_scale_experiment.py --stages smoke
+```
+
+Run later stages explicitly when the smoke stage succeeds:
+
+```powershell
+python scripts/run_lightgcn_scale_experiment.py --stages coverage stability trained
+```
+
+The stages are defined in `configs/lightgcn_scale_experiment.json`. Each stage gets
+separate model and validation directories, and completed stages are combined in
+`outputs/lightgcn_scale_experiment/scale_comparison.csv.gz`. The stages change one
+main factor at a time: graph context, pair count, and training steps. They remain
+validation experiments; test data must not be used to choose the scale or conflict
+weight. See `notebooks/08_scale_experiment_walkthrough.ipynb` for the comparison.
+Use `--summarize-only` to rebuild the comparison table without retraining.
 
 ## Preprocessing definition
 
