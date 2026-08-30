@@ -114,68 +114,63 @@ def sample_bpr_batch(
     batch_size: int,
     random_seed: int,
 ) -> pd.DataFrame:
-    """Sample positive edges and unseen negative movies for one BPR batch."""
+    """Draw one reproducible batch; reuse BPRBatchSampler inside training loops."""
 
-    if batch_size <= 0:
-        raise ValueError("batch_size must be a positive integer")
+    return BPRBatchSampler(graph, random_seed=random_seed).sample(batch_size=batch_size)
 
-    positives_by_user = positive_movie_sets(graph)
-    saturated_users = [
-        user_index
-        for user_index, movie_set in enumerate(positives_by_user)
-        if len(movie_set) == graph.num_movies
-    ]
-    eligible_edge_positions = np.flatnonzero(
-        ~np.isin(graph.positive_user_indices, saturated_users)
-    )
-    if not len(eligible_edge_positions):
-        raise ValueError("No user has an unseen movie available for negative sampling")
 
-    rng = np.random.default_rng(random_seed)
-    sampled_positions = rng.choice(
-        eligible_edge_positions,
-        size=batch_size,
-        replace=True,
-    )
-    user_indices = graph.positive_user_indices[sampled_positions]
-    positive_movie_indices = graph.positive_movie_indices[sampled_positions]
-    negative_movie_indices = rng.integers(
-        0,
-        graph.num_movies,
-        size=batch_size,
-        dtype=np.int64,
-    )
+class BPRBatchSampler:
+    """Cache positive sets and advance one RNG across successive training batches.
 
-    invalid = np.fromiter(
-        (
-            int(movie_index) in positives_by_user[int(user_index)]
-            for user_index, movie_index in zip(user_indices, negative_movie_indices)
-        ),
-        dtype=bool,
-        count=batch_size,
-    )
-    while invalid.any():
-        negative_movie_indices[invalid] = rng.integers(
-            0,
-            graph.num_movies,
-            size=int(invalid.sum()),
-            dtype=np.int64,
+    Negatives are absent from the positive training graph, not necessarily unrated:
+    low ratings can also be sampled. Validation/test labels are never consulted.
+    """
+
+    def __init__(self, graph: BipartiteGraphData, *, random_seed: int) -> None:
+        self.graph = graph
+        self.rng = np.random.default_rng(random_seed)
+        self.positives_by_user = positive_movie_sets(graph)
+        saturated_users = [
+            user for user, items in enumerate(self.positives_by_user)
+            if len(items) == graph.num_movies
+        ]
+        self.eligible_edge_positions = np.flatnonzero(
+            ~np.isin(graph.positive_user_indices, saturated_users)
         )
-        invalid_positions = np.flatnonzero(invalid)
-        invalid[invalid_positions] = np.fromiter(
-            (
-                int(negative_movie_indices[position])
-                in positives_by_user[int(user_indices[position])]
-                for position in invalid_positions
-            ),
-            dtype=bool,
-            count=len(invalid_positions),
-        )
+        if not len(self.eligible_edge_positions):
+            raise ValueError("No user has a non-positive movie available for negative sampling")
 
-    return pd.DataFrame(
-        {
-            "userIndex": user_indices,
-            "positiveMovieIndex": positive_movie_indices,
-            "negativeMovieIndex": negative_movie_indices,
-        }
-    )
+    def sample(self, *, batch_size: int) -> pd.DataFrame:
+        """Sample positive edges uniformly with replacement and exclude known positives."""
+
+        if batch_size <= 0:
+            raise ValueError("batch_size must be a positive integer")
+        positions = self.rng.choice(self.eligible_edge_positions, size=batch_size, replace=True)
+        users = self.graph.positive_user_indices[positions]
+        positives = self.graph.positive_movie_indices[positions]
+        negatives = self.rng.integers(0, self.graph.num_movies, size=batch_size, dtype=np.int64)
+
+        # Bound rejection attempts so near-saturated users cannot stall a batch.
+        for _ in range(32):
+            invalid = np.fromiter(
+                (int(item) in self.positives_by_user[int(user)] for user, item in zip(users, negatives)),
+                dtype=bool,
+                count=batch_size,
+            )
+            if not invalid.any():
+                break
+            negatives[invalid] = self.rng.integers(
+                0, self.graph.num_movies, size=int(invalid.sum()), dtype=np.int64,
+            )
+
+        for position, (user, item) in enumerate(zip(users, negatives)):
+            known = self.positives_by_user[int(user)]
+            if int(item) in known:
+                available = np.setdiff1d(np.arange(self.graph.num_movies), list(known))
+                negatives[position] = self.rng.choice(available)
+
+        return pd.DataFrame({
+            "userIndex": users,
+            "positiveMovieIndex": positives,
+            "negativeMovieIndex": negatives,
+        })
