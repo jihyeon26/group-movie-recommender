@@ -24,6 +24,7 @@ This repository contains the reproducible preprocessing foundation for a conflic
 │   ├── algorithms/              # Recommendation and scoring algorithms
 │   │   ├── graph_data.py        # Graph indexing and BPR negative sampling
 │   │   ├── group_ranking.py     # Average and conflict-aware aggregation
+│   │   ├── lightgcn_math.py     # Propagation, scoring, and BPR loss mathematics
 │   │   └── popularity.py        # Non-personalized popularity baseline
 │   ├── evaluation/              # Offline group evaluation
 │   │   ├── diagnostics.py       # Held-out joint-relevance diagnostics
@@ -118,6 +119,13 @@ personalized model is introduced.
 `notebooks/03_graph_data_walkthrough.ipynb` converts original MovieLens IDs into
 contiguous user and movie indices, constructs the undirected bipartite `edge_index`,
 and samples reproducible BPR triples whose negative movies are unseen by the user.
+
+## Understand LightGCN mathematics
+
+`notebooks/04_lightgcn_math_walkthrough.ipynb` applies symmetric degree
+normalization, neighbor propagation, layer averaging, dot-product scoring, and BPR
+loss with NumPy. It exposes the model mathematics before adding automatic
+differentiation and a full training loop.
 
 ## Preprocessing definition
 
