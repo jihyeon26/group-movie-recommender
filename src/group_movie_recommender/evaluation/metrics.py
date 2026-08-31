@@ -169,4 +169,15 @@ def evaluate_shared_rankings(
         f"catalogueCoverage@{k}": float(len(recommended_items) / catalog_size),
         f"uniqueRecommendedItems@{k}": int(len(recommended_items)),
     }
+    ndcg_a_positive = pair_metrics[f"ndcgA@{k}"] > 0
+    ndcg_b_positive = pair_metrics[f"ndcgB@{k}"] > 0
+    summary["twoSidedHitPairRate"] = float(
+        (ndcg_a_positive & ndcg_b_positive).mean()
+    )
+    summary["oneSidedHitPairRate"] = float(
+        (ndcg_a_positive ^ ndcg_b_positive).mean()
+    )
+    summary["noHitPairRate"] = float(
+        (~ndcg_a_positive & ~ndcg_b_positive).mean()
+    )
     return pair_metrics, summary
