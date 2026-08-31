@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -54,13 +55,23 @@ def batch_to_tensors(batch: pd.DataFrame) -> tuple[torch.Tensor, ...]:
 def train_lightgcn(
     graph: BipartiteGraphData,
     config: LightGCNTrainingConfig,
+    *,
+    validation_callback: Callable[[LightGCN, int], tuple[float, float]] | None = None,
+    validation_interval: int = 100,
+    patience: int = 4,
 ) -> tuple[LightGCN, pd.DataFrame]:
     """Train on sampled positives; monitor a fixed training diagnostic batch.
 
     The monitor is NOT a validation/test set or a recommendation metric. This CPU
     reference propagates over the complete graph each update and is not yet a
-    throughput-tuned MovieLens 32M trainer.
+    throughput-tuned MovieLens 32M trainer. An optional callback returns a
+    validation (primary, tie-breaker) score; larger is better. When supplied,
+    restore the best checkpoint, not the last update. Exact ties retain the
+    earlier checkpoint. History attrs contain checkpoint-selection metadata.
     """
+
+    if validation_interval <= 0 or patience <= 0:
+        raise ValueError("validation_interval and patience must be positive")
 
     model = LightGCN(
         graph,
@@ -78,6 +89,34 @@ def train_lightgcn(
             return float(model.bpr_objective(*monitor, l2_weight=0.0)["bpr_loss"].item())
 
     rows = [{"step": 0, "fixed_training_bpr_loss": fixed_batch_loss()}]
+    best_key: tuple[float, float] | None = None
+    best_weights: torch.Tensor | None = None
+    best_step = 0
+    stale_checks = 0
+
+    def validate(step: int, row: dict) -> bool:
+        nonlocal best_key, best_weights, best_step, stale_checks
+        if validation_callback is None:
+            return False
+        model.eval()
+        with torch.no_grad():
+            scores = tuple(float(value) for value in validation_callback(model, step))
+        model.train()
+        if len(scores) != 2 or not np.isfinite(scores).all():
+            raise ValueError("Validation must return two finite scores")
+        improved = best_key is None or scores > best_key
+        row.update(validation_primary=scores[0], validation_secondary=scores[1],
+                   checkpoint_improved=improved)
+        if improved:
+            best_key = scores
+            best_weights = model.embedding.weight.detach().clone()
+            best_step = step
+            stale_checks = 0
+        else:
+            stale_checks += 1
+        return stale_checks >= patience
+
+    validate(0, rows[0])
     model.train()
     for step in range(1, config.steps + 1):
         batch = batch_to_tensors(sampler.sample(batch_size=config.batch_size))
@@ -85,20 +124,35 @@ def train_lightgcn(
         losses = model.bpr_objective(*batch, l2_weight=config.l2_weight)
         losses["loss"].backward()
         optimizer.step()
-        rows.append({
+        row = {
             "step": step,
             "batch_bpr_loss_before_update": float(losses["bpr_loss"].detach().item()),
             "batch_total_loss_before_update": float(losses["loss"].detach().item()),
             "fixed_training_bpr_loss": fixed_batch_loss(),
-        })
+        }
+        rows.append(row)
+        if step % validation_interval == 0 or step == config.steps:
+            if validate(step, row):
+                break
+    if best_weights is not None:
+        with torch.no_grad():
+            model.embedding.weight.copy_(best_weights)
     model.eval()
-    return model, pd.DataFrame(rows)
+    history = pd.DataFrame(rows)
+    history.attrs.update(
+        best_step=best_step if validation_callback is not None else int(rows[-1]["step"]),
+        stopped_step=int(rows[-1]["step"]),
+        early_stopped=int(rows[-1]["step"]) < config.steps,
+        validation_selected=validation_callback is not None,
+    )
+    return model, history
 
 
 def train_small_graph(
     graph: BipartiteGraphData,
     config: LightGCNTrainingConfig,
+    **training_options,
 ) -> tuple[LightGCN, pd.DataFrame]:
     """Backward-compatible name for the educational small-graph trainer."""
 
-    return train_lightgcn(graph, config)
+    return train_lightgcn(graph, config, **training_options)
