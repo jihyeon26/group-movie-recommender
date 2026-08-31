@@ -7,6 +7,7 @@ import unittest
 import pandas as pd
 
 from group_movie_recommender.algorithms.cold_start import (
+    diversify_group_ranking,
     recommend_cold_start_group,
     score_cold_start_candidates,
     select_onboarding_movies,
@@ -107,6 +108,27 @@ class ColdStartTests(unittest.TestCase):
         invalid = pd.DataFrame({"movieId": [1], "rating": [0.0]})
         with self.assertRaises(ValueError):
             score_cold_start_candidates(self.movies, self.warm, invalid)
+
+    def test_diversification_can_promote_a_novel_genre(self) -> None:
+        candidates = pd.DataFrame(
+            {
+                "movieId": [1, 2, 3],
+                "genres": ["Drama", "Drama", "Comedy"],
+                "groupScore": [0.95, 0.94, 0.91],
+                "minimumScore": [0.90, 0.89, 0.88],
+                "averageScore": [0.95, 0.94, 0.91],
+            }
+        )
+
+        diversified = diversify_group_ranking(
+            candidates,
+            k=2,
+            diversity_weight=0.10,
+        )
+
+        self.assertEqual(diversified["movieId"].tolist(), [1, 3])
+        self.assertEqual(diversified["baseRank"].tolist(), [1, 3])
+        self.assertEqual(diversified["rank"].tolist(), [1, 2])
 
 
 if __name__ == "__main__":

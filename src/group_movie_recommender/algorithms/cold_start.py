@@ -221,8 +221,15 @@ def recommend_cold_start_group(
     conflict_weight: float = 0.65,
     k: int = 10,
     candidate_pool_size: int = 2_000,
+    diversity_weight: float = 0.0,
+    diversity_pool_size: int = 100,
 ) -> pd.DataFrame:
     """Return one conflict-aware list for two new or sparsely rated members."""
+
+    if not 0.0 <= diversity_weight <= 1.0:
+        raise ValueError("diversity_weight must be between zero and one")
+    if diversity_pool_size < k:
+        raise ValueError("diversity_pool_size must be at least k")
 
     catalog = _movie_catalog(movies, warm_catalog)
     all_rated = set(ratings_a.get("movieId", pd.Series(dtype=int)).astype(int)) | set(
@@ -252,6 +259,86 @@ def recommend_cold_start_group(
     )
     aligned = aligned.loc[~aligned["movieId"].isin(all_rated)].head(candidate_pool_size)
     normalized = normalize_member_scores(aligned)
-    ranked = rank_group_candidates(normalized, conflict_weight=conflict_weight, k=k)
+    ranking_size = diversity_pool_size if diversity_weight > 0 else k
+    ranked = rank_group_candidates(
+        normalized,
+        conflict_weight=conflict_weight,
+        k=ranking_size,
+    )
     details = catalog.loc[:, ["movieId", "title", "genres", "trainPositiveCount"]]
-    return ranked.merge(details, on="movieId", how="left", validate="one_to_one")
+    ranked = ranked.merge(details, on="movieId", how="left", validate="one_to_one")
+    if diversity_weight > 0:
+        return diversify_group_ranking(
+            ranked,
+            k=k,
+            diversity_weight=diversity_weight,
+        )
+    return ranked
+
+
+def diversify_group_ranking(
+    candidates: pd.DataFrame,
+    *,
+    k: int,
+    diversity_weight: float,
+) -> pd.DataFrame:
+    """Greedily reward genre novelty while retaining the group score."""
+
+    required = {"movieId", "genres", "groupScore", "minimumScore", "averageScore"}
+    _require_columns(candidates, required, "Ranked candidates")
+    if k <= 0 or len(candidates) < k:
+        raise ValueError("k must be positive and no larger than the candidate pool")
+    if not 0.0 <= diversity_weight <= 1.0:
+        raise ValueError("diversity_weight must be between zero and one")
+
+    remaining = candidates.copy().reset_index(drop=True)
+    remaining["baseRank"] = np.arange(1, len(remaining) + 1, dtype=np.int32)
+    selected: list[pd.Series] = []
+    selected_genres: list[set[str]] = []
+    while len(selected) < k:
+        best_index: int | None = None
+        best_key: tuple[float, float, float, int] | None = None
+        best_bonus = 0.0
+        for index, row in remaining.iterrows():
+            genres = _genre_set(str(row["genres"]))
+            maximum_overlap = max(
+                (_genre_jaccard(genres, prior) for prior in selected_genres),
+                default=0.0,
+            )
+            bonus = 1.0 - maximum_overlap if selected_genres else 0.0
+            diversified_score = float(row["groupScore"]) + diversity_weight * bonus
+            key = (
+                diversified_score,
+                float(row["minimumScore"]),
+                float(row["averageScore"]),
+                -int(row["movieId"]),
+            )
+            if best_key is None or key > best_key:
+                best_index = int(index)
+                best_key = key
+                best_bonus = bonus
+        assert best_index is not None and best_key is not None
+        chosen = remaining.loc[best_index].copy()
+        chosen["diversityBonus"] = best_bonus
+        chosen["diversifiedScore"] = best_key[0]
+        selected.append(chosen)
+        selected_genres.append(_genre_set(str(chosen["genres"])))
+        remaining = remaining.drop(index=best_index).reset_index(drop=True)
+
+    result = pd.DataFrame(selected).reset_index(drop=True)
+    result["rank"] = np.arange(1, len(result) + 1, dtype=np.int32)
+    ordered = ["rank", "baseRank", *[column for column in result.columns if column not in {"rank", "baseRank"}]]
+    return result.loc[:, ordered]
+
+
+def _genre_set(value: str) -> set[str]:
+    return {
+        genre
+        for genre in value.split("|")
+        if genre and genre != "(no genres listed)"
+    }
+
+
+def _genre_jaccard(left: set[str], right: set[str]) -> float:
+    union = left | right
+    return len(left & right) / len(union) if union else 0.0
