@@ -17,6 +17,9 @@ dependencies = [
 training = [
     "torch>=2.5,<3",
 ]
+app = [
+    "streamlit>=1.50,<2",
+]
 dev = [
     "ipykernel>=6.29",
     "jupyterlab>=4.2",
