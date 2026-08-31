@@ -1,0 +1,39 @@
+{
+  "k": 10,
+  "epochs": 20,
+  "batch_size": 8192,
+  "patience": 4,
+  "validation_interval": 1,
+  "random_seed": 20260828,
+  "torch_threads": 2,
+  "runs": [
+    {
+      "name": "explicit_mf_f16_r0001",
+      "factors": 16,
+      "learning_rate": 0.01,
+      "regularization": 0.0001
+    },
+    {
+      "name": "explicit_mf_f32_r0001",
+      "factors": 32,
+      "learning_rate": 0.01,
+      "regularization": 0.0001
+    },
+    {
+      "name": "explicit_mf_f32_r001",
+      "factors": 32,
+      "learning_rate": 0.01,
+      "regularization": 0.001
+    }
+  ],
+  "aggregations": [
+    {"name": "average", "kind": "linear", "conflict_weight": 0.0},
+    {"name": "conflict_025", "kind": "linear", "conflict_weight": 0.25},
+    {"name": "conflict_050", "kind": "linear", "conflict_weight": 0.5},
+    {"name": "conflict_075", "kind": "linear", "conflict_weight": 0.75},
+    {"name": "least_misery", "kind": "linear", "conflict_weight": 1.0},
+    {"name": "nash", "kind": "nash", "conflict_weight": 0.0}
+  ],
+  "bootstrap_resamples": 10000,
+  "bootstrap_seed": 20260828
+}

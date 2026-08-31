@@ -338,6 +338,26 @@ lowest no-hit pair rate among the current personalized models. All paired
 bootstrap intervals for NDCG differences included zero, so these differences are
 not conclusive.
 
+## Test whether explicit dislikes help group recommendation
+
+The biased explicit matrix-factorization experiment uses every pre-2019 rating
+from 0.5 to 5.0 for the same users and movie catalogue. It selects the latent
+dimension and regularization with average aggregation, then compares average,
+four conflict weights, least misery, and Nash aggregation on validation only.
+
+```powershell
+python scripts/run_explicit_mf_experiment.py select
+python scripts/run_explicit_mf_experiment.py test
+```
+
+The current run used 454,781 ratings, including 231,751 ratings below 4.0. It
+selected 32 factors, regularization 0.0001, epoch 6, and Nash aggregation. Nash
+was effectively tied with average on validation. Conflict penalties did not
+improve the overall minimum-member NDCG. The exploratory test showed that this
+rating-prediction objective was substantially weaker for Top-10 retrieval than
+ItemKNN, ALS, and LightGCN. Conflict-band outputs use only training genre and
+rating-similarity features and are saved separately for cautious subgroup analysis.
+
 ## Recommend for two external users
 
 The real-user script accepts a MovieLens-style export (`movieId`, `rating`) and

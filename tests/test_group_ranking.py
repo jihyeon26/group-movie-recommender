@@ -9,6 +9,7 @@ import pandas as pd
 from group_movie_recommender.algorithms.group_ranking import (
     normalize_member_scores,
     rank_group_candidates,
+    rank_nash_group_candidates,
     score_group_candidates,
 )
 
@@ -70,6 +71,17 @@ class GroupRankingTests(unittest.TestCase):
                 self.normalized_scores,
                 conflict_weight=1.1,
             )
+
+    def test_nash_ranking_rewards_balanced_utility(self) -> None:
+        candidates = pd.DataFrame({
+            "movieId": [101, 102, 103],
+            "qA": [1.0, 0.6, 0.3],
+            "qB": [0.3, 0.6, 0.9],
+        })
+        ranked = rank_nash_group_candidates(candidates, k=3)
+
+        self.assertEqual(ranked["movieId"].tolist(), [102, 101, 103])
+        self.assertAlmostEqual(ranked.iloc[0]["groupScore"], 0.6)
 
 
 if __name__ == "__main__":
