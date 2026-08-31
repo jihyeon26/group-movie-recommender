@@ -78,6 +78,21 @@ class EmbeddingInferenceTests(unittest.TestCase):
         )
         self.assertEqual(result["movieId"].tolist(), [300])
 
+    def test_score_matrix_supports_nash_aggregation(self) -> None:
+        pairs = pd.DataFrame({"pairId": [0], "userA": [10], "userB": [20]})
+        result = recommend_pairs_from_score_matrix(
+            pairs,
+            np.array([10, 20]),
+            np.array([[3.0, 2.0, 1.0], [1.0, 2.0, 3.0]]),
+            np.array([100, 200, 300]),
+            {},
+            conflict_weight=0.0,
+            aggregation="nash",
+            k=2,
+        )
+
+        self.assertEqual(result["movieId"].tolist(), [200, 100])
+
 
 if __name__ == "__main__":
     unittest.main()

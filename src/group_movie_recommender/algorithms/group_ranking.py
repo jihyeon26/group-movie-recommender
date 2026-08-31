@@ -93,3 +93,26 @@ def rank_group_candidates(
     )
     ranked.insert(0, "rank", np.arange(1, len(ranked) + 1, dtype=np.int32))
     return ranked
+
+
+def rank_nash_group_candidates(
+    normalized_scores: pd.DataFrame,
+    *,
+    k: int = 10,
+) -> pd.DataFrame:
+    """Rank candidates by the geometric mean of both members' utilities."""
+
+    if k <= 0:
+        raise ValueError("k must be a positive integer")
+    scored = score_group_candidates(normalized_scores, conflict_weight=0.0)
+    scored["groupScore"] = np.sqrt(scored["qA"] * scored["qB"])
+    ranked = (
+        scored.sort_values(
+            ["groupScore", "minimumScore", "averageScore", "movieId"],
+            ascending=[False, False, False, True],
+        )
+        .head(k)
+        .reset_index(drop=True)
+    )
+    ranked.insert(0, "rank", np.arange(1, len(ranked) + 1, dtype=np.int32))
+    return ranked

@@ -5,7 +5,11 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .group_ranking import normalize_member_scores, rank_group_candidates
+from .group_ranking import (
+    normalize_member_scores,
+    rank_group_candidates,
+    rank_nash_group_candidates,
+)
 
 
 def fold_in_user_embedding(
@@ -157,6 +161,7 @@ def recommend_pairs_from_score_matrix(
     *,
     conflict_weight: float,
     k: int,
+    aggregation: str = "linear",
 ) -> pd.DataFrame:
     """Rank pairs from precomputed full-catalogue scores such as ItemKNN."""
 
@@ -167,6 +172,8 @@ def recommend_pairs_from_score_matrix(
         raise ValueError("user_scores must have shape (number of users, number of movies)")
     if not np.isfinite(scores).all():
         raise ValueError("user_scores must be finite")
+    if aggregation not in {"linear", "nash"}:
+        raise ValueError("aggregation must be linear or nash")
     records = []
     catalogue = set(movies.tolist())
     for fallback_pair_id, row in enumerate(pairs.itertuples(index=False)):
@@ -182,9 +189,13 @@ def recommend_pairs_from_score_matrix(
             "scoreA": scores[positions[0], mask],
             "scoreB": scores[positions[1], mask],
         })
-        ranked = rank_group_candidates(
-            normalize_member_scores(raw), conflict_weight=conflict_weight, k=k,
-        )
+        normalized = normalize_member_scores(raw)
+        if aggregation == "nash":
+            ranked = rank_nash_group_candidates(normalized, k=k)
+        else:
+            ranked = rank_group_candidates(
+                normalized, conflict_weight=conflict_weight, k=k,
+            )
         ranked.insert(1, "pairId", pair_id)
         ranked.insert(2, "userA", int(row.userA))
         ranked.insert(3, "userB", int(row.userB))
