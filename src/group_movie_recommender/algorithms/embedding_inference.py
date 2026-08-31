@@ -8,6 +8,91 @@ import pandas as pd
 from .group_ranking import normalize_member_scores, rank_group_candidates
 
 
+def fold_in_user_embedding(
+    ratings: pd.DataFrame,
+    movie_ids: np.ndarray,
+    movie_embeddings: np.ndarray,
+    *,
+    positive_threshold: float = 4.0,
+) -> np.ndarray:
+    """Estimate a new user's vector from positively rated item embeddings.
+
+    LightGCN is transductive, so a user absent from the training graph has no
+    learned embedding. This deterministic fold-in uses the same positive-rating
+    threshold as the graph and gives higher ratings slightly more weight.
+    """
+
+    required = {"movieId", "rating"}
+    missing = required - set(ratings.columns)
+    if missing:
+        raise ValueError(f"Ratings are missing columns: {sorted(missing)}")
+    if ratings["movieId"].duplicated().any():
+        raise ValueError("A fold-in profile can contain only one rating per movieId")
+    known_ids = np.asarray(movie_ids, dtype=np.int64)
+    embeddings = np.asarray(movie_embeddings, dtype=float)
+    if embeddings.ndim != 2 or len(known_ids) != len(embeddings):
+        raise ValueError("Movie IDs and a two-dimensional embedding matrix must align")
+    if len(known_ids) == 0 or len(np.unique(known_ids)) != len(known_ids):
+        raise ValueError("Movie IDs must be non-empty and unique")
+
+    positive = ratings.loc[
+        pd.to_numeric(ratings["rating"], errors="coerce") >= positive_threshold,
+        ["movieId", "rating"],
+    ].copy()
+    positive["movieId"] = pd.to_numeric(positive["movieId"], errors="coerce")
+    positive = positive.dropna(subset=["movieId", "rating"])
+    position_by_id = {int(movie_id): index for index, movie_id in enumerate(known_ids)}
+    positive = positive.loc[positive["movieId"].astype(int).isin(position_by_id)]
+    if positive.empty:
+        raise ValueError("No positive ratings overlap the trained movie embeddings")
+
+    positions = np.array(
+        [position_by_id[int(movie_id)] for movie_id in positive["movieId"]],
+        dtype=np.int64,
+    )
+    # At threshold 4.0, weights are 0.5, 1.0, and 1.5 for ratings 4, 4.5, and 5.
+    weights = positive["rating"].to_numpy(dtype=float) - positive_threshold + 0.5
+    return np.average(embeddings[positions], axis=0, weights=weights)
+
+
+def score_folded_in_pair(
+    ratings_a: pd.DataFrame,
+    ratings_b: pd.DataFrame,
+    movie_ids: np.ndarray,
+    movie_embeddings: np.ndarray,
+    *,
+    positive_threshold: float = 4.0,
+) -> pd.DataFrame:
+    """Score all unseen model movies for two users folded into item space."""
+
+    user_a = fold_in_user_embedding(
+        ratings_a,
+        movie_ids,
+        movie_embeddings,
+        positive_threshold=positive_threshold,
+    )
+    user_b = fold_in_user_embedding(
+        ratings_b,
+        movie_ids,
+        movie_embeddings,
+        positive_threshold=positive_threshold,
+    )
+    seen = set(ratings_a["movieId"].astype(int)) | set(ratings_b["movieId"].astype(int))
+    model_movie_ids = np.asarray(movie_ids, dtype=np.int64)
+    model_movie_embeddings = np.asarray(movie_embeddings, dtype=float)
+    candidate_mask = ~np.isin(model_movie_ids, np.fromiter(seen, dtype=np.int64))
+    if not candidate_mask.any():
+        raise ValueError("No unseen movies remain in the embedding catalogue")
+    candidates = model_movie_embeddings[candidate_mask]
+    return pd.DataFrame(
+        {
+            "movieId": model_movie_ids[candidate_mask],
+            "scoreA": candidates @ user_a,
+            "scoreB": candidates @ user_b,
+        }
+    )
+
+
 def recommend_pairs_from_embeddings(
     pairs: pd.DataFrame,
     user_ids: np.ndarray,
