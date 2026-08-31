@@ -33,6 +33,9 @@ class ExperimentSummaryTests(unittest.TestCase):
                     "meanNDCGGap@10": 0.02,
                     "meanAverageRecall@10": 0.03,
                     "catalogueCoverage@10": 0.04,
+                    "twoSidedHitPairRate": 0.1,
+                    "oneSidedHitPairRate": 0.2,
+                    "noHitPairRate": 0.7,
                 },
                 {
                     "method": "lightgcn_conflict_0.5",
@@ -44,6 +47,9 @@ class ExperimentSummaryTests(unittest.TestCase):
                     "meanNDCGGap@10": 0.01,
                     "meanAverageRecall@10": 0.04,
                     "catalogueCoverage@10": 0.05,
+                    "twoSidedHitPairRate": 0.2,
+                    "oneSidedHitPairRate": 0.3,
+                    "noHitPairRate": 0.5,
                 },
             ],
         }
@@ -55,6 +61,7 @@ class ExperimentSummaryTests(unittest.TestCase):
         self.assertEqual(rows[1]["conflict_weight"], 0.5)
         self.assertEqual(rows[1]["validation_target_coverage"], 0.6)
         self.assertEqual(rows[1]["evaluated_pair_count"], 24)
+        self.assertEqual(rows[1]["two_sided_hit_pair_rate"], 0.2)
 
 
 if __name__ == "__main__":

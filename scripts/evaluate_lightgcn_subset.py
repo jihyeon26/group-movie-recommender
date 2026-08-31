@@ -19,6 +19,12 @@ from group_movie_recommender.evaluation.metrics import (
     build_pair_relevant_item_sets,
     evaluate_shared_rankings,
 )
+from group_movie_recommender.evaluation.ranking_diagnostics import (
+    compare_rankings_to_reference,
+)
+from group_movie_recommender.evaluation.uncertainty import (
+    paired_bootstrap_mean_difference,
+)
 from group_movie_recommender.filtering.candidates import build_seen_item_sets
 from group_movie_recommender.filtering.catalog import positive_events
 from group_movie_recommender.preprocessing.config import PreprocessingConfig
@@ -39,6 +45,8 @@ def main() -> None:
     ranking = json.loads(args.ranking_config.read_text(encoding="utf-8"))
     k = int(ranking["k"])
     weights = [float(value) for value in ranking["conflict_weights"]]
+    bootstrap_resamples = int(ranking["bootstrap_resamples"])
+    bootstrap_seed = int(ranking["bootstrap_seed"])
     if 0.0 not in weights:
         raise ValueError("conflict_weights must include 0.0 for the average baseline")
 
@@ -126,6 +134,34 @@ def main() -> None:
     best_primary = max(float(row[key]) for row in personalized)
     primary_ties = [row for row in personalized if float(row[key]) == best_primary]
     selected = max(primary_ties, key=lambda row: float(row[f"meanAverageNDCG@{k}"]))
+    all_recommendations = pd.concat(recommendation_frames, ignore_index=True)
+    all_pair_metrics = pd.concat(metric_frames, ignore_index=True)
+    ranking_diagnostics = compare_rankings_to_reference(
+        all_recommendations,
+        reference_method="lightgcn_average",
+        k=k,
+    )
+    comparison_pairs = list(
+        dict.fromkeys(
+            [
+                ("lightgcn_average", "popularity"),
+                (str(selected["method"]), "lightgcn_average"),
+                (str(selected["method"]), "popularity"),
+            ]
+        )
+    )
+    bootstrap_comparisons = [
+        paired_bootstrap_mean_difference(
+            all_pair_metrics,
+            method_a=method_a,
+            method_b=method_b,
+            metric=f"minimumNDCG@{k}",
+            n_resamples=bootstrap_resamples,
+            random_seed=bootstrap_seed,
+        )
+        for method_a, method_b in comparison_pairs
+        if method_a != method_b
+    ]
     report = {
         "purpose": "Subset validation integration; not final full-catalogue performance",
         "k": k,
@@ -136,10 +172,17 @@ def main() -> None:
         "selection_metric": key,
         "selection_metric_value": best_primary,
         "methods_tied_on_selection_metric": [row["method"] for row in primary_ties],
+        "ranking_diagnostics_reference": "lightgcn_average",
+        "ranking_diagnostics": ranking_diagnostics.to_dict(orient="records"),
+        "paired_bootstrap_validation_diagnostics": bootstrap_comparisons,
         "methods": summaries,
     }
-    write_csv_gzip(pd.concat(recommendation_frames, ignore_index=True), args.output_dir / "recommendations.csv.gz")
-    write_csv_gzip(pd.concat(metric_frames, ignore_index=True), args.output_dir / "pair_metrics.csv.gz")
+    write_csv_gzip(all_recommendations, args.output_dir / "recommendations.csv.gz")
+    write_csv_gzip(all_pair_metrics, args.output_dir / "pair_metrics.csv.gz")
+    write_csv_gzip(
+        ranking_diagnostics,
+        args.output_dir / "ranking_diagnostics.csv.gz",
+    )
     write_json(report, args.output_dir / "validation_report.json")
     print(json.dumps(report, indent=2))
     print(f"\nValidation outputs: {args.output_dir.resolve()}")

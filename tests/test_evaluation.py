@@ -51,6 +51,9 @@ class EvaluationTests(unittest.TestCase):
         self.assertAlmostEqual(pair_metrics.loc[0, "averageNDCG@3"], (ndcg_a + ndcg_b) / 2)
         self.assertAlmostEqual(pair_metrics.loc[0, "minimumNDCG@3"], min(ndcg_a, ndcg_b))
         self.assertAlmostEqual(summary["catalogueCoverage@3"], 3 / 5)
+        self.assertEqual(summary["twoSidedHitPairRate"], 1.0)
+        self.assertEqual(summary["oneSidedHitPairRate"], 0.0)
+        self.assertEqual(summary["noHitPairRate"], 0.0)
 
     def test_relevance_is_restricted_to_eligible_movies(self) -> None:
         positives = pd.DataFrame(

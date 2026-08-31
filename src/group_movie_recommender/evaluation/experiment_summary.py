@@ -46,6 +46,9 @@ def build_stage_rows(
                 "mean_ndcg_gap_at_10": float(method["meanNDCGGap@10"]),
                 "mean_average_recall_at_10": float(method["meanAverageRecall@10"]),
                 "catalogue_coverage_at_10": float(method["catalogueCoverage@10"]),
+                "two_sided_hit_pair_rate": float(method["twoSidedHitPairRate"]),
+                "one_sided_hit_pair_rate": float(method["oneSidedHitPairRate"]),
+                "no_hit_pair_rate": float(method["noHitPairRate"]),
             }
         )
     return rows
