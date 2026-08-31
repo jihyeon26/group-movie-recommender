@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import re
 import sys
 
 import numpy as np
@@ -39,7 +40,15 @@ def main() -> None:
     parser.add_argument("--preprocessing-config", type=Path, default=PROJECT_ROOT / "configs/preprocessing.json")
     parser.add_argument("--ranking-config", type=Path, default=PROJECT_ROOT / "configs/ranking_validation.json")
     parser.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "outputs/lightgcn_subset_validation")
+    parser.add_argument(
+        "--method-prefix",
+        default="lightgcn",
+        help="Prefix used to label personalized ranking methods in exported results.",
+    )
     args = parser.parse_args()
+
+    if not re.fullmatch(r"[a-z][a-z0-9_]*", args.method_prefix):
+        raise ValueError("method-prefix must be a lowercase identifier")
 
     preprocessing = PreprocessingConfig.from_json(args.preprocessing_config)
     ranking = json.loads(args.ranking_config.read_text(encoding="utf-8"))
@@ -94,8 +103,9 @@ def main() -> None:
     metric_frames.append(pair_metrics)
     summaries.append({"method": "popularity", **summary})
 
+    average_method = f"{args.method_prefix}_average"
     for weight in weights:
-        method = "lightgcn_average" if weight == 0.0 else f"lightgcn_conflict_{weight:g}"
+        method = average_method if weight == 0.0 else f"{args.method_prefix}_conflict_{weight:g}"
         recommendations = recommend_pairs_from_embeddings(
             pairs,
             user_ids,
@@ -138,14 +148,14 @@ def main() -> None:
     all_pair_metrics = pd.concat(metric_frames, ignore_index=True)
     ranking_diagnostics = compare_rankings_to_reference(
         all_recommendations,
-        reference_method="lightgcn_average",
+        reference_method=average_method,
         k=k,
     )
     comparison_pairs = list(
         dict.fromkeys(
             [
-                ("lightgcn_average", "popularity"),
-                (str(selected["method"]), "lightgcn_average"),
+                (average_method, "popularity"),
+                (str(selected["method"]), average_method),
                 (str(selected["method"]), "popularity"),
             ]
         )
@@ -172,7 +182,8 @@ def main() -> None:
         "selection_metric": key,
         "selection_metric_value": best_primary,
         "methods_tied_on_selection_metric": [row["method"] for row in primary_ties],
-        "ranking_diagnostics_reference": "lightgcn_average",
+        "personalized_method_prefix": args.method_prefix,
+        "ranking_diagnostics_reference": average_method,
         "ranking_diagnostics": ranking_diagnostics.to_dict(orient="records"),
         "paired_bootstrap_validation_diagnostics": bootstrap_comparisons,
         "methods": summaries,

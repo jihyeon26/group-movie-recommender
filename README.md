@@ -258,6 +258,17 @@ Run later stages explicitly when the smoke stage succeeds:
 python scripts/run_lightgcn_scale_experiment.py --stages coverage stability trained
 ```
 
+Run the zero-propagation BPR matrix-factorization ablation on the same controlled
+graph, pairs, embedding size, training steps, and candidates:
+
+```powershell
+python scripts/run_lightgcn_scale_experiment.py --stages bpr_mf
+```
+
+The ablation labels its methods `bpr_mf_average` and `bpr_mf_conflict_*`. When
+both `trained` and `bpr_mf` outputs exist, the runner also writes paired bootstrap
+comparisons to `outputs/lightgcn_scale_experiment/model_ablation_bootstrap.json`.
+
 The stages are defined in `configs/lightgcn_scale_experiment.json`. Each stage gets
 separate model and validation directories, and completed stages are combined in
 `outputs/lightgcn_scale_experiment/scale_comparison.csv.gz`. The stages change one
@@ -273,11 +284,15 @@ Use `--summarize-only` to rebuild the comparison table without retraining.
 - Validation contains ratings from 2019.
 - Test contains ratings from 2020 onward.
 - Lower-activity users can contribute to graph training.
-- The stricter main evaluation cohort is selected separately.
+- The current stricter evaluation cohort uses activity thresholds from train,
+  validation, and test. It is therefore suitable for exploratory analysis but is
+  not an untouched confirmatory test cohort.
 - Warm movies are defined only from positive training interactions.
 - Synthetic pair features use training ratings only.
 - Dissimilar pairs fall in the bottom quartile for both centered genre similarity and co-rating correlation.
-- Test feedback is used only after pair selection to measure observable joint relevance.
+- Test feedback has already been inspected for cohort filtering, pair diagnostics,
+  and the standalone popularity result. Final reporting must disclose this rather
+  than describe the current test period as sealed.
 
 All thresholds are stored in `configs/preprocessing.json` rather than hard-coded in scripts.
 

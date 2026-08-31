@@ -1,4 +1,20 @@
 {
+  "bootstrap_resamples": 10000,
+  "bootstrap_seed": 20260828,
+  "paired_comparisons": [
+    {
+      "name": "graph_propagation_average",
+      "method_a": {"stage": "trained", "method": "lightgcn_average"},
+      "method_b": {"stage": "bpr_mf", "method": "bpr_mf_average"},
+      "metric": "minimumNDCG@10"
+    },
+    {
+      "name": "graph_propagation_conflict",
+      "method_a": {"stage": "trained", "method": "lightgcn_conflict_1"},
+      "method_b": {"stage": "bpr_mf", "method": "bpr_mf_conflict_1"},
+      "metric": "minimumNDCG@10"
+    }
+  ],
   "stages": {
     "smoke": {
       "subset": {
@@ -53,6 +69,22 @@
       "training": {
         "embedding_dim": 16,
         "num_layers": 2,
+        "steps": 150,
+        "batch_size": 512,
+        "learning_rate": 0.02,
+        "l2_weight": 0.0001,
+        "random_seed": 20260828
+      }
+    },
+    "bpr_mf": {
+      "method_prefix": "bpr_mf",
+      "subset": {
+        "pair_limit": 100,
+        "total_user_limit": 2500
+      },
+      "training": {
+        "embedding_dim": 16,
+        "num_layers": 0,
         "steps": 150,
         "batch_size": 512,
         "learning_rate": 0.02,

@@ -15,6 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from group_movie_recommender.evaluation.experiment_summary import build_stage_rows
+from group_movie_recommender.evaluation.uncertainty import paired_bootstrap_mean_difference
 from group_movie_recommender.shared.io import write_csv_gzip, write_json
 
 
@@ -73,6 +74,16 @@ def main() -> None:
             )
     comparison = collect_completed_stages(args.output_root, list(configured_stages))
     write_csv_gzip(comparison, args.output_root / "scale_comparison.csv.gz")
+    paired_comparisons = collect_paired_comparisons(
+        args.output_root,
+        experiment.get("paired_comparisons", []),
+        n_resamples=int(experiment.get("bootstrap_resamples", 10_000)),
+        random_seed=int(experiment.get("bootstrap_seed", 20_260_828)),
+    )
+    write_json(
+        {"comparisons": paired_comparisons},
+        args.output_root / "model_ablation_bootstrap.json",
+    )
     print("\nCompleted-stage comparison:")
     print(comparison.to_string(index=False))
 
@@ -113,6 +124,8 @@ def run_stage(
         str(model_dir),
         "--output-dir",
         str(validation_dir),
+        "--method-prefix",
+        str(settings.get("method_prefix", "lightgcn")),
     ]
 
     print(f"\n=== Stage: {stage} ===", flush=True)
@@ -147,6 +160,53 @@ def collect_completed_stages(output_root: Path, stages: list[str]) -> pd.DataFra
     if not rows:
         raise ValueError("No completed experiment stages were found")
     return pd.DataFrame(rows)
+
+
+def collect_paired_comparisons(
+    output_root: Path,
+    specifications: list[dict[str, object]],
+    *,
+    n_resamples: int,
+    random_seed: int,
+) -> list[dict[str, object]]:
+    """Compare configured methods when both stage metric files are available."""
+
+    results: list[dict[str, object]] = []
+    for specification in specifications:
+        left = specification["method_a"]
+        right = specification["method_b"]
+        left_path = output_root / str(left["stage"]) / "validation/pair_metrics.csv.gz"
+        right_path = output_root / str(right["stage"]) / "validation/pair_metrics.csv.gz"
+        if not left_path.exists() or not right_path.exists():
+            continue
+        left_rows = pd.read_csv(left_path)
+        right_rows = pd.read_csv(right_path)
+        method_a = str(left["method"])
+        method_b = str(right["method"])
+        selected = pd.concat(
+            [
+                left_rows.loc[left_rows["method"] == method_a],
+                right_rows.loc[right_rows["method"] == method_b],
+            ],
+            ignore_index=True,
+        )
+        result = paired_bootstrap_mean_difference(
+            selected,
+            method_a=method_a,
+            method_b=method_b,
+            metric=str(specification["metric"]),
+            n_resamples=n_resamples,
+            random_seed=random_seed,
+        )
+        results.append(
+            {
+                "name": str(specification["name"]),
+                "stageA": str(left["stage"]),
+                "stageB": str(right["stage"]),
+                **result,
+            }
+        )
+    return results
 
 
 if __name__ == "__main__":
