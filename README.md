@@ -44,7 +44,7 @@ This repository contains the reproducible preprocessing foundation for a conflic
 │       └── io.py                # Memory-aware MovieLens I/O
 ├── tests/                       # Small deterministic unit tests
 ├── outputs/                     # Generated files; ignored except for .gitkeep
-├── app.py                       # Two-person rating and recommendation interface
+├── app.py                       # Single-person movie-rating data collector
 └── exploration/                 # Local exploratory notebooks; fully ignored
 ```
 
@@ -81,36 +81,40 @@ uv pip install -e ".[training,dev]"
 
 Activate the environment or select `.venv/Scripts/python.exe` as the notebook kernel.
 
-## Rate movies and get a group recommendation
+## Collect ratings from one participant
 
-The Streamlit app lets two new people rate a small, genre-diverse set drawn from
-popular MovieLens 32M titles. Install the app dependency after preparing the data:
+The Streamlit app lets one participant rate a genre-diverse set drawn from popular
+MovieLens 32M titles. Install the app dependency after preparing the data:
 
 ```powershell
-uv pip install -e ".[app]"
-streamlit run app.py
+uv venv tmp/app-venv
+uv pip install --python tmp/app-venv/Scripts/python.exe -e ".[app]"
+./tmp/app-venv/Scripts/streamlit.exe run app.py
 ```
 
-Each person can skip unseen titles, move through three sets of popular movies, or
-search the complete MovieLens catalogue. There is no minimum number of ratings:
+The separate ignored environment avoids conflicts with notebooks or training jobs
+that may have the main `.venv` open.
 
-- With no ratings, recommendations fall back to popular warm movies.
-- With a few ratings, a regularized genre profile is blended with popularity.
-- As more ratings arrive, personal taste receives more weight.
-- Movies rated by either member are removed from the shared candidate list.
-- The existing conflict-aware ranker balances average satisfaction with the
-  lower-scoring member, controlled by the app's compromise slider.
+The participant can skip unseen titles, continue through unique 12-movie batches
+for as long as desired, go back to earlier batches, or search the complete
+MovieLens catalogue. Movie posters are shown using each title's MovieLens-to-TMDB
+link so that similar titles are easier to recognize.
+
+- Assign a different positive participant ID to every person.
+- Only explicit half-star ratings from 0.5 to 5.0 are saved.
+- "Not seen" choices remain missing and are never converted into dislikes.
+- Every saved rating keeps the time at which it was entered.
+- The sidebar download creates a CSV as soon as at least one movie is rated.
 
 The download button exports `userId,movieId,rating,timestamp`, matching the
-MovieLens ratings schema. Reserved positive user IDs `1000000001` and `1000000002`
-distinguish the two new members without colliding with MovieLens 32M users. "Not
-seen" choices are missing data and are never exported as dislikes.
+MovieLens ratings schema. The default participant ID is above the MovieLens 32M
+user range and can be changed in the sidebar. Keep exported live ratings separate
+from the historical offline benchmark until a retraining and time-split policy is
+defined.
 
-This cold-start layer is needed because a new visitor has no node or learned
-embedding in the current LightGCN graph. Keep exported live ratings separate from
-the historical offline benchmark until a retraining and time-split policy is
-defined. The interactive recommendation uses the sparse profile and the already
-produced training-only `warm_movies.csv.gz` catalogue.
+Poster images come from TMDB. The app contains the attribution required by TMDB
+and uses a checked-in URL cache for the starter movies; searched titles are looked
+up when selected and fall back to a local placeholder if no poster is available.
 
 ## Run the pipeline
 

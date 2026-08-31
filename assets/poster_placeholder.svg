@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="450" viewBox="0 0 300 450">
+  <rect width="300" height="450" rx="18" fill="#18212f"/>
+  <circle cx="150" cy="190" r="72" fill="none" stroke="#94a3b8" stroke-width="10"/>
+  <circle cx="150" cy="150" r="14" fill="#94a3b8"/>
+  <circle cx="190" cy="190" r="14" fill="#94a3b8"/>
+  <circle cx="150" cy="230" r="14" fill="#94a3b8"/>
+  <circle cx="110" cy="190" r="14" fill="#94a3b8"/>
+  <path d="M150 262v70h76" fill="none" stroke="#94a3b8" stroke-width="10" stroke-linecap="round"/>
+  <text x="150" y="382" text-anchor="middle" fill="#cbd5e1" font-family="Arial, sans-serif" font-size="20">Poster unavailable</text>
+</svg>
