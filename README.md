@@ -305,6 +305,21 @@ the existing cohort had already used test-activity thresholds and the test perio
 had previously been inspected. Full limitations are recorded in the generated
 `test_report.json`.
 
+## Compare confidence-weighted implicit ALS
+
+ALS is selected on the same graph, pairs, catalogue, and validation protocol. The
+declared grid varies factor count, positive confidence, and regularization. Its
+test phase is explicitly exploratory because the test period was already consumed.
+
+```powershell
+python scripts/run_als_experiment.py select
+python scripts/run_als_experiment.py test
+```
+
+The current validation run selected 32 factors, alpha 10, regularization 0.1, and
+iteration 12. ALS produced broader catalogue coverage and higher exploratory test
+average NDCG than the existing models, but lower minimum-member NDCG than LightGCN.
+
 ## Recommend for two external users
 
 The real-user script accepts a MovieLens-style export (`movieId`, `rating`) and
@@ -316,6 +331,16 @@ python scripts/recommend_user_pair.py `
   --ratings-a dataset/user/user1-1.csv `
   --ratings-b dataset/user/user1-2.csv `
   --k 15
+```
+
+Use the validation-selected ALS model instead:
+
+```powershell
+python scripts/recommend_user_pair.py `
+  --model als `
+  --ratings-a dataset/user/user1-1.csv `
+  --ratings-b dataset/user/user1-2.csv `
+  --output-dir outputs/user_pair_recommendation_als
 ```
 
 Because external users have no learned node in the transductive LightGCN graph,

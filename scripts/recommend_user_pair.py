@@ -15,6 +15,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from group_movie_recommender.algorithms.embedding_inference import score_folded_in_pair
+from group_movie_recommender.algorithms.implicit_als import (
+    ImplicitALSConfig,
+    recalculate_user_factor,
+)
 from group_movie_recommender.algorithms.group_ranking import (
     normalize_member_scores,
     rank_group_candidates,
@@ -47,10 +51,13 @@ def main() -> None:
     parser.add_argument(
         "--embedding-artifact",
         type=Path,
-        default=(
-            PROJECT_ROOT
-            / "outputs/validation_selected_model/runs/lightgcn_d32_lr002/final_embeddings.npz"
-        ),
+        default=None,
+        help="Override the selected artifact for the chosen model.",
+    )
+    parser.add_argument("--model", choices=("lightgcn", "als"), default="lightgcn")
+    parser.add_argument(
+        "--als-selection", type=Path,
+        default=PROJECT_ROOT / "outputs/als_experiment/selection.json",
     )
     parser.add_argument(
         "--conflict-weight", type=float, default=0.0,
@@ -79,16 +86,32 @@ def main() -> None:
     ratings_b, import_b = load_external_movie_ratings(
         args.ratings_b, links, warm_ids
     )
-    with np.load(args.embedding_artifact) as artifact:
+    if args.embedding_artifact is None:
+        if args.model == "lightgcn":
+            embedding_path = (
+                PROJECT_ROOT
+                / "outputs/validation_selected_model/runs/lightgcn_d32_lr002/final_embeddings.npz"
+            )
+        else:
+            als_selection = json.loads(args.als_selection.read_text(encoding="utf-8"))
+            embedding_path = args.als_selection.parent / als_selection["selected_run"]["artifact"]
+    else:
+        embedding_path = args.embedding_artifact
+    with np.load(embedding_path) as artifact:
         model_movie_ids = artifact["movie_ids"]
         model_movie_embeddings = artifact["movie_embeddings"]
-    raw_scores = score_folded_in_pair(
-        ratings_a,
-        ratings_b,
-        model_movie_ids,
-        model_movie_embeddings,
-        positive_threshold=float(args.positive_threshold),
-    )
+    if args.model == "lightgcn":
+        raw_scores = score_folded_in_pair(
+            ratings_a, ratings_b, model_movie_ids, model_movie_embeddings,
+            positive_threshold=float(args.positive_threshold),
+        )
+    else:
+        als_selection = json.loads(args.als_selection.read_text(encoding="utf-8"))
+        config = ImplicitALSConfig(**als_selection["selected_run"]["config"])
+        raw_scores = score_als_pair(
+            ratings_a, ratings_b, model_movie_ids, model_movie_embeddings, config,
+            positive_threshold=float(args.positive_threshold),
+        )
     normalized = normalize_member_scores(raw_scores)
 
     methods = {
@@ -138,9 +161,10 @@ def main() -> None:
     comparison.to_csv(args.output_dir / "method_comparison.csv", index=False)
     selected.to_csv(args.output_dir / "recommendations.csv", index=False)
     summary = {
-        "purpose": "Real-user LightGCN fold-in demonstration; not an offline benchmark result",
+        "purpose": f"Real-user {args.model} fold-in demonstration; not an offline benchmark result",
         "imports": {"userA": import_a, "userB": import_b},
-        "modelArtifact": str(args.embedding_artifact.resolve()),
+        "model": args.model,
+        "modelArtifact": str(embedding_path.resolve()),
         "foldIn": {
             "positiveThreshold": float(args.positive_threshold),
             "userAPositiveRatingsInModel": positive_count_a,
@@ -152,8 +176,8 @@ def main() -> None:
         "candidateCount": int(len(raw_scores)),
         "k": int(args.k),
         "selectedMethod": (
-            "lightgcn_fold_in_average" if args.conflict_weight == 0.0
-            else "lightgcn_fold_in_conflict_aware"
+            f"{args.model}_fold_in_average" if args.conflict_weight == 0.0
+            else f"{args.model}_fold_in_conflict_aware"
         ),
         "conflictWeight": float(args.conflict_weight),
         "outputColumns": list(selected.columns),
@@ -167,9 +191,40 @@ def main() -> None:
     display = selected.loc[:, display_columns].copy()
     print(json.dumps(summary, indent=2))
     label = "average" if args.conflict_weight == 0.0 else "conflict-aware"
-    print(f"\nLightGCN fold-in {label} recommendation:\n")
+    print(f"\n{args.model.upper()} fold-in {label} recommendation:\n")
     print(display.to_string(index=False))
     print(f"\nOutputs: {args.output_dir.resolve()}")
+
+
+def score_als_pair(
+    ratings_a: pd.DataFrame,
+    ratings_b: pd.DataFrame,
+    movie_ids: np.ndarray,
+    movie_factors: np.ndarray,
+    config: ImplicitALSConfig,
+    *,
+    positive_threshold: float,
+) -> pd.DataFrame:
+    """Recalculate two external ALS user factors and score their unseen union."""
+
+    position = {int(movie_id): index for index, movie_id in enumerate(movie_ids)}
+
+    def user_factor(ratings: pd.DataFrame) -> np.ndarray:
+        positive_ids = ratings.loc[
+            ratings["rating"].ge(positive_threshold), "movieId"
+        ].astype(int)
+        indices = np.array([position[movie] for movie in positive_ids if movie in position])
+        return recalculate_user_factor(movie_factors, indices, config)
+
+    user_a, user_b = user_factor(ratings_a), user_factor(ratings_b)
+    seen = set(ratings_a["movieId"].astype(int)) | set(ratings_b["movieId"].astype(int))
+    candidate_mask = ~np.isin(movie_ids, np.fromiter(seen, dtype=np.int64))
+    candidates = movie_factors[candidate_mask]
+    return pd.DataFrame({
+        "movieId": movie_ids[candidate_mask],
+        "scoreA": candidates @ user_a,
+        "scoreB": candidates @ user_b,
+    })
 
 
 if __name__ == "__main__":
