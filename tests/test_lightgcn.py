@@ -69,6 +69,27 @@ class LightGCNTests(unittest.TestCase):
             actual = model.bpr_objective(users, positives, negatives, l2_weight=0.0)
         self.assertAlmostEqual(float(actual["loss"]), expected, places=6)
 
+    def test_validation_restores_best_checkpoint_and_stops_early(self) -> None:
+        graph = build_toy_training_graph()
+        snapshots = {}
+
+        def validate(model, step):
+            snapshots[step] = model.embedding.weight.detach().clone()
+            return ({0: 0.0, 5: 0.5, 10: 0.4, 15: 0.3}[step], 0.0)
+
+        model, history = train_small_graph(
+            graph,
+            LightGCNTrainingConfig(steps=20, batch_size=16, random_seed=7),
+            validation_callback=validate,
+            validation_interval=5,
+            patience=2,
+        )
+
+        self.assertEqual(history.attrs["best_step"], 5)
+        self.assertEqual(history.attrs["stopped_step"], 15)
+        self.assertTrue(history.attrs["early_stopped"])
+        torch.testing.assert_close(model.embedding.weight, snapshots[5])
+
 
 if __name__ == "__main__":
     unittest.main()

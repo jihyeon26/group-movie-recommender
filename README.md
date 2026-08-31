@@ -277,6 +277,55 @@ validation experiments; test data must not be used to choose the scale or confli
 weight. See `notebooks/08_scale_experiment_walkthrough.ipynb` for the comparison.
 Use `--summarize-only` to rebuild the comparison table without retraining.
 
+## Select checkpoints on validation, then freeze test
+
+The final controlled experiment separates model selection from test evaluation.
+Run the phases as two commands; `test` verifies checksums from the frozen selection
+manifest and refuses to overwrite an existing final report.
+
+```powershell
+python scripts/run_validation_training.py select
+python scripts/run_validation_training.py test
+```
+
+The declared search compares three LightGCN configurations and a zero-propagation
+BPR-MF ablation on the same 2,500 users, 100 pairs, training graph, catalogue, and
+seed. Checkpoints are selected using average aggregation and validation
+minimum-member NDCG@10, with average NDCG@10 as tie-breaker. The conflict weight is
+tuned only after selecting the LightGCN representation. Test candidate filtering
+uses the union of both members' train and validation histories.
+
+The frozen exploratory run selected 32 dimensions, two graph layers, learning rate
+0.02, and step 200. Validation selected conflict weight 0, so conflict-aware
+ranking did not beat simple average aggregation. On 98 test-evaluable pairs,
+LightGCN average obtained minimum-member NDCG@10 0.01566 versus 0.01267 for
+popularity, but the paired 95% bootstrap interval for the difference included zero.
+Catalogue coverage@10 was 0.02382 versus 0.01512. These are exploratory results:
+the existing cohort had already used test-activity thresholds and the test period
+had previously been inspected. Full limitations are recorded in the generated
+`test_report.json`.
+
+## Recommend for two external users
+
+The real-user script accepts a MovieLens-style export (`movieId`, `rating`) and
+an IMDb ratings export. IMDb series and episodes are excluded, IMDb ratings are
+converted from 1--10 to 0.5--5, and titles are mapped through `links.csv`.
+
+```powershell
+python scripts/recommend_user_pair.py `
+  --ratings-a dataset/user/user1-1.csv `
+  --ratings-b dataset/user/user1-2.csv `
+  --k 15
+```
+
+Because external users have no learned node in the transductive LightGCN graph,
+the script folds each person into the trained item space using a weighted average
+of their mapped ratings of four or higher. It removes every movie rated by either
+person, scores the remaining model catalogue, and exports average, conflict-aware,
+and least-misery rankings under `outputs/user_pair_recommendation/`. The default
+artifact and group weight come from the frozen validation selection. This is a
+demonstration on real profiles, not an offline performance estimate.
+
 ## Preprocessing definition
 
 - Ratings of at least 4.0 are positive interactions.
