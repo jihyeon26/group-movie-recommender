@@ -320,6 +320,24 @@ The current validation run selected 32 factors, alpha 10, regularization 0.1, an
 iteration 12. ALS produced broader catalogue coverage and higher exploratory test
 average NDCG than the existing models, but lower minimum-member NDCG than LightGCN.
 
+## Compare an interpretable ItemKNN model
+
+ItemKNN uses cosine co-occurrence between positive training interactions. Its
+validation grid varies neighborhood size and shrinkage, then evaluates the
+selected setting on the same pairs and catalogue as the other methods:
+
+```powershell
+python scripts/run_item_knn_experiment.py select
+python scripts/run_item_knn_experiment.py test
+```
+
+Validation selected 100 neighbors with shrinkage 10. On the exploratory test,
+ItemKNN was close to ALS on average NDCG@10 and slightly above LightGCN on
+minimum-member NDCG@10. It also had the highest minimum-member Recall@10 and the
+lowest no-hit pair rate among the current personalized models. All paired
+bootstrap intervals for NDCG differences included zero, so these differences are
+not conclusive.
+
 ## Recommend for two external users
 
 The real-user script accepts a MovieLens-style export (`movieId`, `rating`) and
@@ -341,6 +359,16 @@ python scripts/recommend_user_pair.py `
   --ratings-a dataset/user/user1-1.csv `
   --ratings-b dataset/user/user1-2.csv `
   --output-dir outputs/user_pair_recommendation_als
+```
+
+Use the validation-selected ItemKNN model instead:
+
+```powershell
+python scripts/recommend_user_pair.py `
+  --model itemknn `
+  --ratings-a dataset/user/user1-1.csv `
+  --ratings-b dataset/user/user1-2.csv `
+  --output-dir outputs/user_pair_recommendation_itemknn
 ```
 
 Because external users have no learned node in the transductive LightGCN graph,

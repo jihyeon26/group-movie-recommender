@@ -148,6 +148,50 @@ def recommend_pairs_from_embeddings(
     return pd.concat(records, ignore_index=True)
 
 
+def recommend_pairs_from_score_matrix(
+    pairs: pd.DataFrame,
+    user_ids: np.ndarray,
+    user_scores: np.ndarray,
+    movie_ids: np.ndarray,
+    seen_items: dict[int, set[int]],
+    *,
+    conflict_weight: float,
+    k: int,
+) -> pd.DataFrame:
+    """Rank pairs from precomputed full-catalogue scores such as ItemKNN."""
+
+    users = np.asarray(user_ids, dtype=np.int64)
+    movies = np.asarray(movie_ids, dtype=np.int64)
+    scores = np.asarray(user_scores, dtype=float)
+    if scores.shape != (len(users), len(movies)):
+        raise ValueError("user_scores must have shape (number of users, number of movies)")
+    if not np.isfinite(scores).all():
+        raise ValueError("user_scores must be finite")
+    records = []
+    catalogue = set(movies.tolist())
+    for fallback_pair_id, row in enumerate(pairs.itertuples(index=False)):
+        pair_id = int(getattr(row, "pairId", fallback_pair_id))
+        member_ids = np.array([int(row.userA), int(row.userB)])
+        positions = _lookup_positions(users, member_ids)
+        available = catalogue - (
+            seen_items.get(int(row.userA), set()) | seen_items.get(int(row.userB), set())
+        )
+        mask = np.isin(movies, np.fromiter(available, dtype=np.int64))
+        raw = pd.DataFrame({
+            "movieId": movies[mask],
+            "scoreA": scores[positions[0], mask],
+            "scoreB": scores[positions[1], mask],
+        })
+        ranked = rank_group_candidates(
+            normalize_member_scores(raw), conflict_weight=conflict_weight, k=k,
+        )
+        ranked.insert(1, "pairId", pair_id)
+        ranked.insert(2, "userA", int(row.userA))
+        ranked.insert(3, "userB", int(row.userB))
+        records.append(ranked)
+    return pd.concat(records, ignore_index=True)
+
+
 def _lookup_positions(known_ids: np.ndarray, requested_ids: np.ndarray) -> np.ndarray:
     known = np.asarray(known_ids, dtype=np.int64)
     requested = np.asarray(requested_ids, dtype=np.int64)

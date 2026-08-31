@@ -10,6 +10,7 @@ import pandas as pd
 from group_movie_recommender.algorithms.embedding_inference import (
     fold_in_user_embedding,
     recommend_pairs_from_embeddings,
+    recommend_pairs_from_score_matrix,
     score_folded_in_pair,
 )
 
@@ -63,6 +64,19 @@ class EmbeddingInferenceTests(unittest.TestCase):
         )
         self.assertEqual(result["movieId"].tolist(), [300, 400])
         self.assertTrue(set(result["movieId"]).isdisjoint({100, 200}))
+
+    def test_score_matrix_ranking_removes_seen_union(self) -> None:
+        pairs = pd.DataFrame({"pairId": [0], "userA": [10], "userB": [20]})
+        result = recommend_pairs_from_score_matrix(
+            pairs,
+            np.array([10, 20]),
+            np.array([[3.0, 1.0, 2.0], [1.0, 3.0, 2.0]]),
+            np.array([100, 200, 300]),
+            {10: {100}, 20: {200}},
+            conflict_weight=0.0,
+            k=2,
+        )
+        self.assertEqual(result["movieId"].tolist(), [300])
 
 
 if __name__ == "__main__":

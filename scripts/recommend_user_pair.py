@@ -19,6 +19,10 @@ from group_movie_recommender.algorithms.implicit_als import (
     ImplicitALSConfig,
     recalculate_user_factor,
 )
+from group_movie_recommender.algorithms.item_knn import (
+    load_item_knn,
+    score_item_knn_profile,
+)
 from group_movie_recommender.algorithms.group_ranking import (
     normalize_member_scores,
     rank_group_candidates,
@@ -54,10 +58,16 @@ def main() -> None:
         default=None,
         help="Override the selected artifact for the chosen model.",
     )
-    parser.add_argument("--model", choices=("lightgcn", "als"), default="lightgcn")
+    parser.add_argument(
+        "--model", choices=("lightgcn", "als", "itemknn"), default="lightgcn"
+    )
     parser.add_argument(
         "--als-selection", type=Path,
         default=PROJECT_ROOT / "outputs/als_experiment/selection.json",
+    )
+    parser.add_argument(
+        "--item-knn-selection", type=Path,
+        default=PROJECT_ROOT / "outputs/item_knn_experiment/selection.json",
     )
     parser.add_argument(
         "--conflict-weight", type=float, default=0.0,
@@ -86,32 +96,53 @@ def main() -> None:
     ratings_b, import_b = load_external_movie_ratings(
         args.ratings_b, links, warm_ids
     )
-    if args.embedding_artifact is None:
+    selection = None
+    if args.model == "itemknn":
+        selection = json.loads(args.item_knn_selection.read_text(encoding="utf-8"))
+        artifact_path = (
+            args.embedding_artifact
+            if args.embedding_artifact is not None
+            else args.item_knn_selection.parent / selection["model"]
+        )
+        item_knn = load_item_knn(artifact_path)
+        model_movie_ids = item_knn.movie_ids
+        raw_scores = score_item_knn_pair(
+            ratings_a,
+            ratings_b,
+            item_knn,
+            neighbors=int(selection["selected_run"]["neighbors"]),
+            positive_threshold=float(args.positive_threshold),
+        )
+    else:
+        if args.embedding_artifact is None:
+            if args.model == "lightgcn":
+                artifact_path = (
+                    PROJECT_ROOT
+                    / "outputs/validation_selected_model/runs/lightgcn_d32_lr002/final_embeddings.npz"
+                )
+            else:
+                selection = json.loads(args.als_selection.read_text(encoding="utf-8"))
+                artifact_path = (
+                    args.als_selection.parent / selection["selected_run"]["artifact"]
+                )
+        else:
+            artifact_path = args.embedding_artifact
+        with np.load(artifact_path) as artifact:
+            model_movie_ids = artifact["movie_ids"]
+            model_movie_embeddings = artifact["movie_embeddings"]
         if args.model == "lightgcn":
-            embedding_path = (
-                PROJECT_ROOT
-                / "outputs/validation_selected_model/runs/lightgcn_d32_lr002/final_embeddings.npz"
+            raw_scores = score_folded_in_pair(
+                ratings_a, ratings_b, model_movie_ids, model_movie_embeddings,
+                positive_threshold=float(args.positive_threshold),
             )
         else:
-            als_selection = json.loads(args.als_selection.read_text(encoding="utf-8"))
-            embedding_path = args.als_selection.parent / als_selection["selected_run"]["artifact"]
-    else:
-        embedding_path = args.embedding_artifact
-    with np.load(embedding_path) as artifact:
-        model_movie_ids = artifact["movie_ids"]
-        model_movie_embeddings = artifact["movie_embeddings"]
-    if args.model == "lightgcn":
-        raw_scores = score_folded_in_pair(
-            ratings_a, ratings_b, model_movie_ids, model_movie_embeddings,
-            positive_threshold=float(args.positive_threshold),
-        )
-    else:
-        als_selection = json.loads(args.als_selection.read_text(encoding="utf-8"))
-        config = ImplicitALSConfig(**als_selection["selected_run"]["config"])
-        raw_scores = score_als_pair(
-            ratings_a, ratings_b, model_movie_ids, model_movie_embeddings, config,
-            positive_threshold=float(args.positive_threshold),
-        )
+            if selection is None:
+                selection = json.loads(args.als_selection.read_text(encoding="utf-8"))
+            config = ImplicitALSConfig(**selection["selected_run"]["config"])
+            raw_scores = score_als_pair(
+                ratings_a, ratings_b, model_movie_ids, model_movie_embeddings, config,
+                positive_threshold=float(args.positive_threshold),
+            )
     normalized = normalize_member_scores(raw_scores)
 
     methods = {
@@ -164,7 +195,7 @@ def main() -> None:
         "purpose": f"Real-user {args.model} fold-in demonstration; not an offline benchmark result",
         "imports": {"userA": import_a, "userB": import_b},
         "model": args.model,
-        "modelArtifact": str(embedding_path.resolve()),
+        "modelArtifact": str(artifact_path.resolve()),
         "foldIn": {
             "positiveThreshold": float(args.positive_threshold),
             "userAPositiveRatingsInModel": positive_count_a,
@@ -224,6 +255,34 @@ def score_als_pair(
         "movieId": movie_ids[candidate_mask],
         "scoreA": candidates @ user_a,
         "scoreB": candidates @ user_b,
+    })
+
+
+def score_item_knn_pair(
+    ratings_a: pd.DataFrame,
+    ratings_b: pd.DataFrame,
+    model,
+    *,
+    neighbors: int,
+    positive_threshold: float,
+) -> pd.DataFrame:
+    """Score unseen movies for two external profiles with ItemKNN."""
+
+    def user_scores(ratings: pd.DataFrame) -> np.ndarray:
+        positives = ratings.loc[
+            ratings["rating"].ge(positive_threshold), "movieId"
+        ].to_numpy(dtype=np.int64)
+        return score_item_knn_profile(model, positives, neighbors=neighbors)
+
+    scores_a, scores_b = user_scores(ratings_a), user_scores(ratings_b)
+    seen = set(ratings_a["movieId"].astype(int)) | set(ratings_b["movieId"].astype(int))
+    candidate_mask = ~np.isin(
+        model.movie_ids, np.fromiter(seen, dtype=np.int64)
+    )
+    return pd.DataFrame({
+        "movieId": model.movie_ids[candidate_mask],
+        "scoreA": scores_a[candidate_mask],
+        "scoreB": scores_b[candidate_mask],
     })
 
 

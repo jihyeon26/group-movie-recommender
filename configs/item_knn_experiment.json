@@ -1,0 +1,12 @@
+{
+  "k": 10,
+  "runs": [
+    {"name": "itemknn_k50_s0", "neighbors": 50, "shrinkage": 0.0},
+    {"name": "itemknn_k100_s0", "neighbors": 100, "shrinkage": 0.0},
+    {"name": "itemknn_k200_s0", "neighbors": 200, "shrinkage": 0.0},
+    {"name": "itemknn_k100_s10", "neighbors": 100, "shrinkage": 10.0},
+    {"name": "itemknn_k200_s10", "neighbors": 200, "shrinkage": 10.0}
+  ],
+  "bootstrap_resamples": 10000,
+  "bootstrap_seed": 20260828
+}
