@@ -29,6 +29,7 @@ dist/
 
 # Local report-generation helper
 /scripts/build_final_report.py
+/reports/group_movie_recommender_preliminary_report.docx
 
 # Editor and operating-system files
 .vscode/
