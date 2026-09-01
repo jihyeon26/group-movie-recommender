@@ -1,6 +1,9 @@
 # Group Movie Recommender
 
-This repository contains the reproducible preprocessing foundation for a conflict-aware movie recommender for two users with different tastes. The project uses MovieLens 32M and focuses on group fairness: improving the less-satisfied member without collapsing recommendations to a small set of safe, popular movies.
+This repository contains a reproducible shared-movie recommender for two users.
+The final MovieLens 32M experiment compares popularity, LightGCN, and ItemKNN
+on randomly sampled, member-disjoint pairs, with minimum-member relevance as
+the primary outcome.
 
 ## Repository structure
 
@@ -446,3 +449,23 @@ python -m pytest
 ```
 
 The tests use small synthetic tables and do not require the MovieLens files.
+
+# Final random-pair holdout experiment
+
+The report comparison uses 300 development pairs and 500 member-disjoint holdout
+pairs sampled uniformly from a cohort selected without test-period activity. Pair
+similarity is descriptive only. The three frozen methods are popularity, LightGCN,
+and ItemKNN.
+
+```powershell
+python scripts/run_final_holdout_experiment.py prepare
+python scripts/run_final_holdout_experiment.py train
+python scripts/run_final_holdout_experiment.py test
+```
+
+LightGCN uses a 2,500-step budget with validation every 100 steps and patience 5;
+the final run restored step 800 and stopped at step 1,300. On 195 two-sided
+evaluable holdout pairs, ItemKNN improved minimum-member NDCG@10 over popularity
+by 0.00750 (95% paired-bootstrap CI 0.00055 to 0.01484) and average NDCG@10 by
+0.01414 (95% CI 0.00398 to 0.02457). LightGCN did not beat popularity on the
+holdout relevance metrics. Generated data and model outputs remain git-ignored.
