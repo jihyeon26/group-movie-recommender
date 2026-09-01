@@ -25,10 +25,13 @@ dist/
 # Local temporary files
 /tmp/
 *.log
+~$*.docx
+
+# Local report-generation helper
+/scripts/build_final_report.py
 
 # Editor and operating-system files
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-
