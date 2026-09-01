@@ -1,61 +1,69 @@
 # Group Movie Recommender
 
-This repository contains a reproducible shared-movie recommender for two users.
-The final MovieLens 32M experiment compares popularity, LightGCN, and ItemKNN
-on randomly sampled, member-disjoint pairs, with minimum-member relevance as
-the primary outcome.
+A reproducible MovieLens 32M experiment for recommending one shared Top-10
+movie list to two users. The final comparison evaluates global popularity,
+ItemKNN, and LightGCN on randomly sampled, member-disjoint user pairs.
 
-## Repository structure
+## Research question
 
-```text
-.
-├── configs/
-│   └── preprocessing.json       # Reproducible split and filtering thresholds
-├── scripts/
-│   ├── check_data.py            # Schema, missing-data, duplicate, and integrity checks
-│   ├── prepare_data.py          # Split, graph, catalogue, pair, and export pipeline
-│   ├── evaluate_popularity.py   # Baseline recommendations and evaluation
-│   ├── evaluate_lightgcn_subset.py # Validation ranking integration check
-│   ├── run_lightgcn_scale_experiment.py # Staged scale diagnostics
-│   ├── train_lightgcn_subset.py # Controlled MovieLens integration run
-│   └── train_lightgcn_toy.py    # CPU learning sanity check
-├── src/group_movie_recommender/
-│   ├── preprocessing/           # Validation, splitting, sampling, and pair construction
-│   │   ├── config.py            # Typed preprocessing configuration
-│   │   ├── data_check.py        # Source data validation and cleaning
-│   │   ├── pairing.py           # Training-only synthetic pair construction
-│   │   ├── graph_subset.py      # Reproducible focus/context user subsets
-│   │   ├── sampling.py          # Sparse-profile interaction sampling
-│   │   └── splitting.py         # Temporal split and user cohorts
-│   ├── filtering/               # Warm catalogue and pair candidate filtering
-│   │   ├── candidates.py        # Shared warm, unseen candidate sets
-│   │   └── catalog.py           # Positive graph and warm-item filtering
-│   ├── algorithms/              # Recommendation and scoring algorithms
-│   │   ├── embedding_inference.py # Full-catalogue scores from saved embeddings
-│   │   ├── graph_data.py        # Graph indexing and BPR negative sampling
-│   │   ├── group_ranking.py     # Average and conflict-aware aggregation
-│   │   ├── lightgcn.py          # Trainable PyTorch LightGCN
-│   │   ├── lightgcn_math.py     # Propagation, scoring, and BPR loss mathematics
-│   │   └── popularity.py        # Non-personalized popularity baseline
-│   ├── evaluation/              # Offline group evaluation
-│   │   ├── diagnostics.py       # Held-out joint-relevance diagnostics
-│   │   └── metrics.py           # Member and shared-list ranking metrics
-│   ├── pipelines/
-│   │   ├── preprocessing.py     # End-to-end preprocessing orchestration
-│   │   └── lightgcn_training.py # Small-graph mini-batch optimization
-│   └── shared/
-│       └── io.py                # Memory-aware MovieLens I/O
-├── tests/                       # Small deterministic unit tests
-├── outputs/                     # Generated files; ignored except for .gitkeep
-├── app.py                       # Single-person movie-rating data collector
-└── exploration/                 # Local exploratory notebooks; fully ignored
+Under a temporal warm-catalogue evaluation on randomly paired MovieLens users,
+do LightGCN or ItemKNN improve minimum-member NDCG@10 over global popularity,
+and what trade-offs do they create in average NDCG@10 and catalogue coverage?
+
+## Final result
+
+The frozen holdout contains 500 random pairs. Pair-level relevance metrics are
+reported on the 195 pairs with at least one eligible positive future item for
+both members.
+
+| Method | Min NDCG@10 | Avg NDCG@10 | Min Recall@10 | Avg Recall@10 | Coverage@10 |
+|---|---:|---:|---:|---:|---:|
+| Popularity | 0.0260 | 0.0959 | 0.0067 | 0.0376 | 0.0173 |
+| LightGCN | 0.0226 | 0.0848 | 0.0053 | 0.0310 | **0.0254** |
+| ItemKNN | **0.0335** | **0.1100** | **0.0074** | **0.0419** | 0.0202 |
+
+Compared with popularity, ItemKNN improves:
+
+- minimum-member NDCG@10 by `+0.00750` (95% paired-bootstrap CI
+  `[+0.00055, +0.01484]`);
+- average NDCG@10 by `+0.01414` (95% CI `[+0.00398, +0.02457]`).
+
+LightGCN recommends from a broader portion of the catalogue but does not improve
+holdout relevance. The result therefore supports ItemKNN, not additional model
+complexity, for this controlled task.
+
+## Evaluation protocol
+
+- Dataset: MovieLens 32M explicit ratings.
+- Positive interaction: rating of at least 4.0.
+- Train: ratings before 2019.
+- Development: ratings from the 2019 calendar year.
+- Holdout: ratings from 2020 onward.
+- Pairs: 300 development pairs and 500 holdout pairs sampled uniformly without
+  replacement; no user appears in more than one pair.
+- Pair similarity: descriptive only and never used to select pair members.
+- Graph: 5,000 users, 16,923 warm movies, and 706,501 positive train edges.
+- Candidates: warm graph movies not previously rated by either member.
+- Primary metric: minimum-member NDCG@10.
+- Secondary metrics: average NDCG@10 and minimum/average Recall@10.
+- Beyond-accuracy metric: catalogue coverage@10.
+- Uncertainty: paired bootstrap over common evaluable pairs with 10,000
+  resamples.
+
+LightGCN was allowed a maximum of 2,500 steps with validation every 100 steps
+and patience 5. Training stopped at step 1,300 and restored the interior best
+checkpoint from step 800.
+
+## Setup
+
+Python 3.11 or newer is required. Using `uv`:
+
+```powershell
+uv venv
+uv pip install -e ".[training,dev]"
 ```
 
-The local `dataset/`, `exploration/`, `outputs/`, `.venv/`, and `tmp/` directories are intentionally excluded from Git.
-
-## Data setup
-
-Download and extract MovieLens 32M so that the local directory contains:
+Place MovieLens 32M under the ignored local data directory:
 
 ```text
 dataset/movie_lens32m/
@@ -65,397 +73,18 @@ dataset/movie_lens32m/
 └── tags.csv
 ```
 
-The dataset itself must not be committed to this repository.
+Download the dataset separately; do not commit it to the repository.
 
-## Environment
+## Reproduce the final experiment
 
-Using `uv`:
-
-```powershell
-uv venv
-uv pip install -e ".[dev]"
-```
-
-Install the optional PyTorch training dependency when working on LightGCN:
-
-```powershell
-uv pip install -e ".[training,dev]"
-```
-
-Activate the environment or select `.venv/Scripts/python.exe` as the notebook kernel.
-
-## Collect ratings from one participant
-
-The Streamlit app lets one participant rate a genre-diverse set drawn from popular
-MovieLens 32M titles. Install the app dependency after preparing the data:
-
-```powershell
-uv venv tmp/app-venv
-uv pip install --python tmp/app-venv/Scripts/python.exe -e ".[app]"
-./tmp/app-venv/Scripts/streamlit.exe run app.py
-```
-
-The separate ignored environment avoids conflicts with notebooks or training jobs
-that may have the main `.venv` open.
-
-The participant can skip unseen titles, continue through unique 12-movie batches
-for as long as desired, go back to earlier batches, or search the complete
-MovieLens catalogue. Movie posters are shown using each title's MovieLens-to-TMDB
-link so that similar titles are easier to recognize.
-
-- Assign a different positive participant ID to every person.
-- Only explicit half-star ratings from 0.5 to 5.0 are saved.
-- "Not seen" choices remain missing and are never converted into dislikes.
-- Every saved rating keeps the time at which it was entered.
-- The sidebar download creates a CSV as soon as at least one movie is rated.
-
-The download button exports `userId,movieId,rating,timestamp`, matching the
-MovieLens ratings schema. The default participant ID is above the MovieLens 32M
-user range and can be changed in the sidebar. Keep exported live ratings separate
-from the historical offline benchmark until a retraining and time-split policy is
-defined.
-
-Poster images come from TMDB. The app contains the attribution required by TMDB
-and uses a checked-in URL cache for the starter movies; searched titles are looked
-up when selected and fall back to a local placeholder if no poster is available.
-
-## Run the pipeline
-
-Validate the raw files first:
+Validate and preprocess MovieLens:
 
 ```powershell
 python scripts/check_data.py
-```
-
-Then create the temporal split, positive graph, warm catalogue, and dissimilar pairs:
-
-```powershell
 python scripts/prepare_data.py
 ```
 
-Generated artifacts are written under `outputs/processed_movielens32m/` and include:
-
-- `train_positive_edges.csv.gz`
-- `user_split_statistics.csv.gz`
-- `evaluation_users.csv.gz`
-- `warm_movies.csv.gz`
-- `dissimilar_pairs.csv.gz`
-- `manifest.json`
-
-## Run the popularity baseline
-
-After preprocessing, generate one shared Top-10 list per pair and evaluate it:
-
-```powershell
-python scripts/evaluate_popularity.py
-```
-
-The ignored `outputs/popularity_baseline/` directory will contain:
-
-- `recommendations.csv.gz`
-- `pair_metrics.csv.gz`
-- `metrics.json`
-
-The baseline ranks warm movies by positive training-interaction count and removes
-movies already observed by either group member. The same list is evaluated against
-each member's eligible test positives. See
-`notebooks/01_popularity_and_metrics_walkthrough.ipynb` for a small worked example.
-
-## Understand group ranking
-
-`notebooks/02_group_ranking_walkthrough.ipynb` compares average aggregation with
-conflict-aware aggregation on three inspectable candidate movies. It shows how the
-conflict weight changes the shared ranking and the minimum-member metric before a
-personalized model is introduced.
-
-## Understand the graph input
-
-`notebooks/03_graph_data_walkthrough.ipynb` converts original MovieLens IDs into
-contiguous user and movie indices, constructs the undirected bipartite `edge_index`,
-and samples reproducible BPR triples whose negatives are absent from the user's
-positive training graph. Such movies can be unrated or rated below four; they are
-not confirmed dislikes. Validation/test feedback is never used to sample them.
-
-## Understand LightGCN mathematics
-
-`notebooks/04_lightgcn_math_walkthrough.ipynb` applies symmetric degree
-normalization, neighbor propagation, layer averaging, dot-product scoring, and BPR
-loss with NumPy. It exposes the model mathematics before adding automatic
-differentiation and a full training loop.
-
-## Run the toy LightGCN trainer
-
-The PyTorch learning check uses a synthetic graph and is not a validation result:
-
-```powershell
-python scripts/train_lightgcn_toy.py
-```
-
-Its ignored output contains the fixed training-batch loss before and after 100
-updates. `notebooks/05_lightgcn_training_walkthrough.ipynb` explains embedding
-parameters, automatic differentiation, optimization, and full-catalog scoring.
-
-For the local verification, the broken existing `.venv` was preserved and a separate
-CPU environment was created at `tmp/lightgcn-venv`. Select its
-`Scripts/python.exe` as the notebook interpreter, or run:
-
-```powershell
-& .\tmp\lightgcn-venv\Scripts\python.exe scripts/train_lightgcn_toy.py
-```
-
-The prototype performs full-graph propagation at every optimization step. It has
-not yet been profiled or tuned for MovieLens 32M, and does not perform validation
-selection or test evaluation. See the official
-[PyTorch sparse matrix multiplication documentation](https://docs.pytorch.org/docs/stable/generated/torch.sparse.mm.html)
-for the differentiable propagation operation used here.
-
-## Run the controlled MovieLens subset
-
-After preprocessing, run a bounded real-data integration check:
-
-```powershell
-python scripts/train_lightgcn_subset.py
-```
-
-The default configuration retains the users in 25 selected pairs and samples
-context users to a total of 500. It exports original IDs with final embeddings so
-future scoring does not confuse MovieLens IDs with matrix row indices. The run is
-explained in `notebooks/06_movielens_subset_walkthrough.ipynb`. Its training loss is
-not used as a model-selection metric and its subset results are not comparable to
-the full-catalogue popularity baseline.
-
-## Evaluate subset rankings
-
-After the controlled subset trainer has exported its embeddings, compare popularity,
-LightGCN average aggregation, and several conflict penalties on validation data:
-
-```powershell
-python scripts/evaluate_lightgcn_subset.py
-```
-
-Every method receives the same subset catalogue and removes the union of the two
-members' training histories. Validation positives are used only as labels. Relevance
-is pair-specific: if one member has already seen a movie, that movie is unavailable
-to the pair and is removed from both members' relevance denominators.
-
-The ignored `outputs/lightgcn_subset_validation/` directory contains ranked lists,
-per-pair metrics, and a JSON report. The report selects among the personalized
-methods by minimum-member NDCG@10 and uses average NDCG@10 only as a tie-breaker.
-`notebooks/07_validation_ranking_walkthrough.ipynb` explains the comparison and its
-limitations. In particular, a small integration run with all methods tied at zero
-on the primary metric cannot support a claim that one aggregation method is better.
-
-## Scale the validation experiment deliberately
-
-The scale runner separates three possible causes of sparse Top-10 results: catalogue
-coverage, number of evaluated pairs, and training duration. Its default runs only
-the inexpensive smoke stage:
-
-```powershell
-python scripts/run_lightgcn_scale_experiment.py --stages smoke
-```
-
-Run later stages explicitly when the smoke stage succeeds:
-
-```powershell
-python scripts/run_lightgcn_scale_experiment.py --stages coverage stability trained
-```
-
-Run the zero-propagation BPR matrix-factorization ablation on the same controlled
-graph, pairs, embedding size, training steps, and candidates:
-
-```powershell
-python scripts/run_lightgcn_scale_experiment.py --stages bpr_mf
-```
-
-The ablation labels its methods `bpr_mf_average` and `bpr_mf_conflict_*`. When
-both `trained` and `bpr_mf` outputs exist, the runner also writes paired bootstrap
-comparisons to `outputs/lightgcn_scale_experiment/model_ablation_bootstrap.json`.
-
-The stages are defined in `configs/lightgcn_scale_experiment.json`. Each stage gets
-separate model and validation directories, and completed stages are combined in
-`outputs/lightgcn_scale_experiment/scale_comparison.csv.gz`. The stages change one
-main factor at a time: graph context, pair count, and training steps. They remain
-validation experiments; test data must not be used to choose the scale or conflict
-weight. See `notebooks/08_scale_experiment_walkthrough.ipynb` for the comparison.
-Use `--summarize-only` to rebuild the comparison table without retraining.
-
-## Select checkpoints on validation, then freeze test
-
-The final controlled experiment separates model selection from test evaluation.
-Run the phases as two commands; `test` verifies checksums from the frozen selection
-manifest and refuses to overwrite an existing final report.
-
-```powershell
-python scripts/run_validation_training.py select
-python scripts/run_validation_training.py test
-```
-
-The declared search compares three LightGCN configurations and a zero-propagation
-BPR-MF ablation on the same 2,500 users, 100 pairs, training graph, catalogue, and
-seed. Checkpoints are selected using average aggregation and validation
-minimum-member NDCG@10, with average NDCG@10 as tie-breaker. The conflict weight is
-tuned only after selecting the LightGCN representation. Test candidate filtering
-uses the union of both members' train and validation histories.
-
-The frozen exploratory run selected 32 dimensions, two graph layers, learning rate
-0.02, and step 200. Validation selected conflict weight 0, so conflict-aware
-ranking did not beat simple average aggregation. On 98 test-evaluable pairs,
-LightGCN average obtained minimum-member NDCG@10 0.01566 versus 0.01267 for
-popularity, but the paired 95% bootstrap interval for the difference included zero.
-Catalogue coverage@10 was 0.02382 versus 0.01512. These are exploratory results:
-the existing cohort had already used test-activity thresholds and the test period
-had previously been inspected. Full limitations are recorded in the generated
-`test_report.json`.
-
-## Recheck the main comparison with 500 disjoint pairs
-
-The scaled robustness experiment greedily selects 500 training-defined pairs
-without repeating a member, builds one fixed 5,000-user graph, and compares only
-Popularity, LightGCN, and ItemKNN with average aggregation. Nested cohorts of 100,
-250, and 500 pairs show how estimates and paired bootstrap intervals stabilize.
-
-```powershell
-python scripts/run_scaled_pair_experiment.py select
-python scripts/run_scaled_pair_experiment.py test
-```
-
-The graph contains 15,627 movies and 556,738 positive edges. The reused LightGCN
-configuration selected step 1,000 on the 500-pair validation cohort; ItemKNN used
-100 neighbors and shrinkage 10. On 490 test-evaluable disjoint pairs, ItemKNN
-obtained average NDCG@10 0.09193 and minimum-member NDCG@10 0.01894, compared with
-0.07336 and 0.01087 for popularity. Both paired 95% bootstrap intervals excluded
-zero. LightGCN obtained 0.07898 and 0.01701 and had the broadest catalogue coverage.
-The test remains exploratory because the evaluation cohort and test period had
-already been inspected before this robustness run.
-
-## Compare confidence-weighted implicit ALS
-
-ALS is selected on the same graph, pairs, catalogue, and validation protocol. The
-declared grid varies factor count, positive confidence, and regularization. Its
-test phase is explicitly exploratory because the test period was already consumed.
-
-```powershell
-python scripts/run_als_experiment.py select
-python scripts/run_als_experiment.py test
-```
-
-The current validation run selected 32 factors, alpha 10, regularization 0.1, and
-iteration 12. ALS produced broader catalogue coverage and higher exploratory test
-average NDCG than the existing models, but lower minimum-member NDCG than LightGCN.
-
-## Compare an interpretable ItemKNN model
-
-ItemKNN uses cosine co-occurrence between positive training interactions. Its
-validation grid varies neighborhood size and shrinkage, then evaluates the
-selected setting on the same pairs and catalogue as the other methods:
-
-```powershell
-python scripts/run_item_knn_experiment.py select
-python scripts/run_item_knn_experiment.py test
-```
-
-Validation selected 100 neighbors with shrinkage 10. On the exploratory test,
-ItemKNN was close to ALS on average NDCG@10 and slightly above LightGCN on
-minimum-member NDCG@10. It also had the highest minimum-member Recall@10 and the
-lowest no-hit pair rate among the current personalized models. All paired
-bootstrap intervals for NDCG differences included zero, so these differences are
-not conclusive.
-
-## Test whether explicit dislikes help group recommendation
-
-The biased explicit matrix-factorization experiment uses every pre-2019 rating
-from 0.5 to 5.0 for the same users and movie catalogue. It selects the latent
-dimension and regularization with average aggregation, then compares average,
-four conflict weights, least misery, and Nash aggregation on validation only.
-
-```powershell
-python scripts/run_explicit_mf_experiment.py select
-python scripts/run_explicit_mf_experiment.py test
-```
-
-The current run used 454,781 ratings, including 231,751 ratings below 4.0. It
-selected 32 factors, regularization 0.0001, epoch 6, and Nash aggregation. Nash
-was effectively tied with average on validation. Conflict penalties did not
-improve the overall minimum-member NDCG. The exploratory test showed that this
-rating-prediction objective was substantially weaker for Top-10 retrieval than
-ItemKNN, ALS, and LightGCN. Conflict-band outputs use only training genre and
-rating-similarity features and are saved separately for cautious subgroup analysis.
-
-## Recommend for two external users
-
-The real-user script accepts a MovieLens-style export (`movieId`, `rating`) and
-an IMDb ratings export. IMDb series and episodes are excluded, IMDb ratings are
-converted from 1--10 to 0.5--5, and titles are mapped through `links.csv`.
-
-```powershell
-python scripts/recommend_user_pair.py `
-  --ratings-a dataset/user/user1-1.csv `
-  --ratings-b dataset/user/user1-2.csv `
-  --k 15
-```
-
-Use the validation-selected ALS model instead:
-
-```powershell
-python scripts/recommend_user_pair.py `
-  --model als `
-  --ratings-a dataset/user/user1-1.csv `
-  --ratings-b dataset/user/user1-2.csv `
-  --output-dir outputs/user_pair_recommendation_als
-```
-
-Use the validation-selected ItemKNN model instead:
-
-```powershell
-python scripts/recommend_user_pair.py `
-  --model itemknn `
-  --ratings-a dataset/user/user1-1.csv `
-  --ratings-b dataset/user/user1-2.csv `
-  --output-dir outputs/user_pair_recommendation_itemknn
-```
-
-Because external users have no learned node in the transductive LightGCN graph,
-the script folds each person into the trained item space using a weighted average
-of their mapped ratings of four or higher. It removes every movie rated by either
-person, scores the remaining model catalogue, and exports average, conflict-aware,
-and least-misery rankings under `outputs/user_pair_recommendation/`. The default
-artifact and group weight come from the frozen validation selection. This is a
-demonstration on real profiles, not an offline performance estimate.
-
-## Preprocessing definition
-
-- Ratings of at least 4.0 are positive interactions.
-- Training contains ratings before 2019.
-- Validation contains ratings from 2019.
-- Test contains ratings from 2020 onward.
-- Lower-activity users can contribute to graph training.
-- The current stricter evaluation cohort uses activity thresholds from train,
-  validation, and test. It is therefore suitable for exploratory analysis but is
-  not an untouched confirmatory test cohort.
-- Warm movies are defined only from positive training interactions.
-- Synthetic pair features use training ratings only.
-- Dissimilar pairs fall in the bottom quartile for both centered genre similarity and co-rating correlation.
-- Test feedback has already been inspected for cohort filtering, pair diagnostics,
-  and the standalone popularity result. Final reporting must disclose this rather
-  than describe the current test period as sealed.
-
-All thresholds are stored in `configs/preprocessing.json` rather than hard-coded in scripts.
-
-## Tests
-
-```powershell
-python -m pytest
-```
-
-The tests use small synthetic tables and do not require the MovieLens files.
-
-# Final random-pair holdout experiment
-
-The report comparison uses 300 development pairs and 500 member-disjoint holdout
-pairs sampled uniformly from a cohort selected without test-period activity. Pair
-similarity is descriptive only. The three frozen methods are popularity, LightGCN,
-and ItemKNN.
+Prepare the frozen cohorts, train the models, and evaluate the holdout once:
 
 ```powershell
 python scripts/run_final_holdout_experiment.py prepare
@@ -463,9 +92,47 @@ python scripts/run_final_holdout_experiment.py train
 python scripts/run_final_holdout_experiment.py test
 ```
 
-LightGCN uses a 2,500-step budget with validation every 100 steps and patience 5;
-the final run restored step 800 and stopped at step 1,300. On 195 two-sided
-evaluable holdout pairs, ItemKNN improved minimum-member NDCG@10 over popularity
-by 0.00750 (95% paired-bootstrap CI 0.00055 to 0.01484) and average NDCG@10 by
-0.01414 (95% CI 0.00398 to 0.02457). LightGCN did not beat popularity on the
-holdout relevance metrics. Generated data and model outputs remain git-ignored.
+Configuration is stored in `configs/final_holdout_experiment.json`. Generated
+data, model artifacts, recommendations, and reports are written under
+`outputs/final_holdout_experiment/` and excluded from Git.
+
+The test phase verifies hashes for the frozen cohort and model artifacts. It
+refuses evaluation when LightGCN's selected checkpoint is at the training-budget
+boundary and refuses to overwrite an existing holdout report.
+
+## Repository structure
+
+```text
+configs/                         Experiment and preprocessing configuration
+scripts/                         Command-line entry points
+src/group_movie_recommender/
+├── algorithms/                  Popularity, ItemKNN, LightGCN, and ranking
+├── evaluation/                  Temporal protocol, metrics, and uncertainty
+├── filtering/                   Warm catalogue and candidate filtering
+├── pipelines/                   Reproducible experiment orchestration
+├── preprocessing/               Validation, splitting, and pair construction
+└── shared/                      Memory-aware I/O utilities
+tests/                           Deterministic unit tests
+```
+
+Local datasets, generated outputs, exploratory notebooks, temporary files, and
+report documents are intentionally ignored.
+
+## Tests
+
+```powershell
+python -m pytest
+```
+
+The test suite uses small synthetic inputs and does not require MovieLens files.
+
+## Limitations
+
+- Pairs are synthetic and do not represent observed households or joint choices.
+- Only 195 of 500 holdout pairs have observable two-sided relevance.
+- The controlled graph is smaller than the full MovieLens 32M graph.
+- Missing ratings are unknown rather than confirmed dislikes.
+- One pair-sampling seed and one LightGCN training seed are used.
+- The same calendar test period had been inspected for earlier, excluded users;
+  the final cohort is user-disjoint and frozen without test-activity filtering,
+  but the test period is not globally untouched.
