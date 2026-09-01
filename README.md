@@ -305,6 +305,27 @@ the existing cohort had already used test-activity thresholds and the test perio
 had previously been inspected. Full limitations are recorded in the generated
 `test_report.json`.
 
+## Recheck the main comparison with 500 disjoint pairs
+
+The scaled robustness experiment greedily selects 500 training-defined pairs
+without repeating a member, builds one fixed 5,000-user graph, and compares only
+Popularity, LightGCN, and ItemKNN with average aggregation. Nested cohorts of 100,
+250, and 500 pairs show how estimates and paired bootstrap intervals stabilize.
+
+```powershell
+python scripts/run_scaled_pair_experiment.py select
+python scripts/run_scaled_pair_experiment.py test
+```
+
+The graph contains 15,627 movies and 556,738 positive edges. The reused LightGCN
+configuration selected step 1,000 on the 500-pair validation cohort; ItemKNN used
+100 neighbors and shrinkage 10. On 490 test-evaluable disjoint pairs, ItemKNN
+obtained average NDCG@10 0.09193 and minimum-member NDCG@10 0.01894, compared with
+0.07336 and 0.01087 for popularity. Both paired 95% bootstrap intervals excluded
+zero. LightGCN obtained 0.07898 and 0.01701 and had the broadest catalogue coverage.
+The test remains exploratory because the evaluation cohort and test period had
+already been inspected before this robustness run.
+
 ## Compare confidence-weighted implicit ALS
 
 ALS is selected on the same graph, pairs, catalogue, and validation protocol. The
