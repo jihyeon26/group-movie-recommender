@@ -416,6 +416,7 @@ def train_final_holdout_models(
         validation_callback=validate,
         validation_interval=int(settings["lightgcn"]["validation_interval"]),
         patience=int(settings["lightgcn"]["patience"]),
+        selection_smoothing=int(settings["lightgcn"].get("selection_smoothing", 1)),
     )
     lightgcn_elapsed = time.perf_counter() - started
     artifact = model_artifact(lightgcn, graph)
