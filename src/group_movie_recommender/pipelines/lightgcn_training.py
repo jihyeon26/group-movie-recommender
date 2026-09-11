@@ -59,6 +59,7 @@ def train_lightgcn(
     validation_callback: Callable[[LightGCN, int], tuple[float, float]] | None = None,
     validation_interval: int = 100,
     patience: int = 4,
+    selection_smoothing: int = 1,
 ) -> tuple[LightGCN, pd.DataFrame]:
     """Train on sampled positives; monitor a fixed training diagnostic batch.
 
@@ -67,11 +68,16 @@ def train_lightgcn(
     throughput-tuned MovieLens 32M trainer. An optional callback returns a
     validation (primary, tie-breaker) score; larger is better. When supplied,
     restore the best checkpoint, not the last update. Exact ties retain the
-    earlier checkpoint. History attrs contain checkpoint-selection metadata.
+    earlier checkpoint. Selection and stopping use a trailing mean over the last
+    selection_smoothing validation estimates, so a noisy primary metric cannot
+    end training on a single sampling spike. History attrs contain
+    checkpoint-selection metadata.
     """
 
     if validation_interval <= 0 or patience <= 0:
         raise ValueError("validation_interval and patience must be positive")
+    if selection_smoothing <= 0:
+        raise ValueError("selection_smoothing must be a positive integer")
 
     model = LightGCN(
         graph,
@@ -93,6 +99,7 @@ def train_lightgcn(
     best_weights: torch.Tensor | None = None
     best_step = 0
     stale_checks = 0
+    recent_scores: list[tuple[float, float]] = []
 
     def validate(step: int, row: dict) -> bool:
         nonlocal best_key, best_weights, best_step, stale_checks
@@ -104,11 +111,21 @@ def train_lightgcn(
         model.train()
         if len(scores) != 2 or not np.isfinite(scores).all():
             raise ValueError("Validation must return two finite scores")
-        improved = best_key is None or scores > best_key
+
+        # Selecting on a single noisy validation estimate picks sampling spikes and
+        # stops training early. Compare a trailing mean instead; a window of one
+        # reproduces the original single-estimate rule.
+        recent_scores.append(scores)
+        del recent_scores[:-selection_smoothing]
+        smoothed = tuple(float(np.mean(values)) for values in zip(*recent_scores))
+
+        improved = best_key is None or smoothed > best_key
         row.update(validation_primary=scores[0], validation_secondary=scores[1],
+                   validation_primary_smoothed=smoothed[0],
+                   validation_secondary_smoothed=smoothed[1],
                    checkpoint_improved=improved)
         if improved:
-            best_key = scores
+            best_key = smoothed
             best_weights = model.embedding.weight.detach().clone()
             best_step = step
             stale_checks = 0
@@ -144,6 +161,8 @@ def train_lightgcn(
         stopped_step=int(rows[-1]["step"]),
         early_stopped=int(rows[-1]["step"]) < config.steps,
         validation_selected=validation_callback is not None,
+        selection_smoothing=int(selection_smoothing),
+        patience=int(patience),
     )
     return model, history
 
