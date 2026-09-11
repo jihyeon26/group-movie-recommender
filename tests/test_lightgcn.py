@@ -90,6 +90,40 @@ class LightGCNTests(unittest.TestCase):
         self.assertTrue(history.attrs["early_stopped"])
         torch.testing.assert_close(model.embedding.weight, snapshots[5])
 
+    def test_smoothing_ignores_a_single_validation_spike(self) -> None:
+        """A noisy primary metric must not end training on one lucky estimate."""
+
+        graph = build_toy_training_graph()
+        # Step 5 is an isolated spike; the underlying signal keeps improving.
+        scores = {0: 0.0, 5: 0.5, 10: 0.3, 15: 0.35, 20: 0.4}
+
+        def run(selection_smoothing):
+            return train_small_graph(
+                graph,
+                LightGCNTrainingConfig(steps=20, batch_size=16, random_seed=7),
+                validation_callback=lambda model, step: (scores[step], 0.0),
+                validation_interval=5,
+                patience=2,
+                selection_smoothing=selection_smoothing,
+            )[1]
+
+        unsmoothed = run(1)
+        self.assertEqual(unsmoothed.attrs["best_step"], 5)
+        self.assertTrue(unsmoothed.attrs["early_stopped"])
+
+        smoothed = run(3)
+        self.assertEqual(smoothed.attrs["best_step"], 15)
+        self.assertFalse(smoothed.attrs["early_stopped"])
+        self.assertEqual(smoothed.attrs["selection_smoothing"], 3)
+
+    def test_selection_smoothing_must_be_positive(self) -> None:
+        with self.assertRaises(ValueError):
+            train_small_graph(
+                build_toy_training_graph(),
+                LightGCNTrainingConfig(steps=5, batch_size=4, random_seed=7),
+                selection_smoothing=0,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
