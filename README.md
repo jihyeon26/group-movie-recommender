@@ -34,7 +34,7 @@ broadest catalogue coverage (606 against 341 distinct items), and the lowest
 share of pairs served nothing relevant (0.292 against 0.349).
 
 Evidence on the primary minimum-member metric is weak for every comparison. It
-is exactly zero for 83 to 87 per cent of evaluable pairs, only 48 of the 195
+is exactly zero for 82 to 85 per cent of evaluable pairs, only 52 of the 195
 pairs return a non-zero value under any method, and of the six reported
 comparisons only the ItemKNN advantage over popularity in average NDCG@10
 survives a Bonferroni correction.
