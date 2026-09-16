@@ -71,10 +71,15 @@ python scripts/run_final_holdout_experiment.py train --output-root outputs/final
 python scripts/run_final_holdout_experiment.py test --output-root outputs/final_holdout_converged
 ```
 
-Outputs land in `outputs/final_holdout_converged/` and are excluded from Git.
 The test phase verifies the frozen cohort and model hashes, refuses a checkpoint
 selected at the training-budget boundary, and refuses to overwrite an existing
 holdout report.
+
+Every number in the tables above comes from
+`outputs/final_holdout_converged/holdout/holdout_report.json`, which is
+committed along with the pair-level metrics, the subgroup table, the training
+history, and the frozen protocol and selection records. Model artifacts, graph
+edges, and recommendation dumps are regenerable and stay out of Git.
 
 ## Layout
 
@@ -100,3 +105,9 @@ Tests use small synthetic inputs and do not require MovieLens files.
 - The 5,000-user graph is smaller than the full MovieLens 32M graph.
 - Missing ratings are unknown, not confirmed dislikes.
 - One pair-sampling seed and one training seed.
+
+## License
+
+MIT for the code; see `LICENSE`. The committed experiment outputs are MovieLens
+32M derivatives redistributed under the GroupLens usage license. MovieLens is
+not included here and must be downloaded separately.
