@@ -6,9 +6,8 @@ ItemKNN, and LightGCN on randomly sampled, member-disjoint user pairs.
 
 ## Research question
 
-Under a temporal warm-catalogue evaluation on randomly paired MovieLens users,
-do LightGCN or ItemKNN improve minimum-member NDCG@10 over global popularity,
-and what trade-offs do they create in average NDCG@10 and catalogue coverage?
+Do LightGCN and ItemKNN improve group recommendation quality over a popularity
+baseline, particularly for the less-satisfied member?
 
 ## Final result
 
