@@ -1,0 +1,42 @@
+{
+  "status": "prepared_without_loading_2020_plus_feedback",
+  "cohort_rule": "Random member-disjoint pairing among users eligible from pre-test activity; pair similarities use pre-2019 ratings for description only; all users from earlier evaluated pair cohorts are excluded.",
+  "eligible_users_before_pairing": 2574,
+  "excluded_prior_users": 1003,
+  "pair_sampling": {
+    "method": "uniform random users without replacement, paired adjacently",
+    "random_seed": 20260828,
+    "similarity_not_used_for_selection": true,
+    "pairs_with_reliable_rating_correlation": 759,
+    "genre_similarity_summary": {
+      "count": 800.0,
+      "mean": 0.20076298030908218,
+      "std": 0.2782154443149759,
+      "min": -0.6459056735038757,
+      "25%": 0.0,
+      "50%": 0.22876448929309845,
+      "75%": 0.4137769266963005,
+      "max": 0.8378713726997375
+    }
+  },
+  "development_pairs": 300,
+  "holdout_pairs": 500,
+  "globally_disjoint_pair_users": 1600,
+  "graph": {
+    "users": 5000,
+    "movies": 16923,
+    "edges": 706501
+  },
+  "file_sha256": {
+    "resolved_config.json": "13b37b32569ba4d38a37de1c47900a7d3785167a5fe3edde8500220641cf4cb0",
+    "preprocessing_config.json": "4a3108b4bb3a6b51e9892181255a9c5ecade9948f5b85e8951bf1426fe8c4f86",
+    "development_pairs.csv.gz": "ca7ab71178f58303bb2b0033c743468c0f0e201f25f464b38fc47e3b1a955504",
+    "holdout_pairs.csv.gz": "49632252d0420c040ee8baff520cfd8fc8bec386bac6fc697b63498a7c5aa1f8",
+    "train_positive_edges.csv.gz": "a9b8bfbc3ff3e9ba2cfc159dbdaafe44f560303152d066fc6c9a2249c5083ff3",
+    "training_catalog.csv.gz": "f01504177da6105e9af8e1cbd3e3d9c58f07fa09aad4dfac6a42bb4dec070eed"
+  },
+  "source_sha256": {
+    "train_positive_edges.csv.gz": "7df776eef96690020cb8f9535cc52fa0208320e1c95aaabffd3f31330fbca382",
+    "user_split_statistics.csv.gz": "5f74c9399b55d0f3e1a34a46a93ae1851b146b98bb39d55defc45cb1d4b45899"
+  }
+}

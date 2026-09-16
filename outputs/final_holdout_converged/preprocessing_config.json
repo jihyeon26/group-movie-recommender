@@ -1,0 +1,17 @@
+{
+  "positive_threshold": 4.0,
+  "train_end": "2019-01-01",
+  "validation_end": "2020-01-01",
+  "training_min_positives": 5,
+  "evaluation_min_train_ratings": 100,
+  "evaluation_min_train_positives": 20,
+  "evaluation_min_validation_positives": 3,
+  "evaluation_min_test_positives": 5,
+  "warm_item_min_train_positives": 5,
+  "pair_min_co_rated": 20,
+  "pair_similarity_quantile": 0.25,
+  "pair_candidate_sample_size": 100000,
+  "max_pairs_per_user": 3,
+  "genre_prior_strength": 10.0,
+  "random_seed": 20260828
+}

@@ -1,0 +1,250 @@
+{
+  "purpose": "Frozen user-disjoint holdout result for the final report",
+  "cohort_selection": "Random member-disjoint pairing among users eligible from pre-test activity; pair similarities use pre-2019 ratings for description only; all users from earlier evaluated pair cohorts are excluded.",
+  "methods_frozen_before_holdout": [
+    "popularity",
+    "lightgcn_average",
+    "item_knn_average"
+  ],
+  "protocol": {
+    "period": "test",
+    "history_splits": [
+      "train",
+      "validation"
+    ],
+    "pairs": 500,
+    "two_sided_evaluable_pairs": 195,
+    "candidate_movies": 16923,
+    "pair_target_coverage_after_filtering": 0.4955205943406533,
+    "member_count": 1000,
+    "pair_memberships": 1000
+  },
+  "methods": [
+    {
+      "method": "popularity",
+      "k": 10,
+      "evaluated_pairs": 195,
+      "skipped_pairs_without_two_sided_relevance": 305,
+      "meanAverageNDCG@10": 0.09589412700199014,
+      "meanMinimumNDCG@10": 0.026013342179164057,
+      "meanNDCGGap@10": 0.1397615696456522,
+      "meanAverageRecall@10": 0.037579132532162066,
+      "meanMinimumRecall@10": 0.006679865759915463,
+      "catalogueCoverage@10": 0.01725462388465402,
+      "uniqueRecommendedItems@10": 292,
+      "twoSidedHitPairRate": 0.14871794871794872,
+      "oneSidedHitPairRate": 0.4461538461538462,
+      "noHitPairRate": 0.40512820512820513
+    },
+    {
+      "method": "lightgcn_average",
+      "conflict_weight": 0.0,
+      "k": 10,
+      "evaluated_pairs": 195,
+      "skipped_pairs_without_two_sided_relevance": 305,
+      "meanAverageNDCG@10": 0.1088314810396774,
+      "meanMinimumNDCG@10": 0.030580931353762327,
+      "meanNDCGGap@10": 0.15650109937183013,
+      "meanAverageRecall@10": 0.046780474491905776,
+      "meanMinimumRecall@10": 0.008392428114840443,
+      "catalogueCoverage@10": 0.03580925367842581,
+      "uniqueRecommendedItems@10": 606,
+      "twoSidedHitPairRate": 0.18461538461538463,
+      "oneSidedHitPairRate": 0.5230769230769231,
+      "noHitPairRate": 0.2923076923076923
+    },
+    {
+      "method": "item_knn_average",
+      "conflict_weight": 0.0,
+      "k": 10,
+      "evaluated_pairs": 195,
+      "skipped_pairs_without_two_sided_relevance": 305,
+      "meanAverageNDCG@10": 0.11003545291554247,
+      "meanMinimumNDCG@10": 0.03351369717159559,
+      "meanNDCGGap@10": 0.15304351148789377,
+      "meanAverageRecall@10": 0.041910745282536764,
+      "meanMinimumRecall@10": 0.007358661583568743,
+      "catalogueCoverage@10": 0.020150091591325414,
+      "uniqueRecommendedItems@10": 341,
+      "twoSidedHitPairRate": 0.16923076923076924,
+      "oneSidedHitPairRate": 0.48205128205128206,
+      "noHitPairRate": 0.3487179487179487
+    }
+  ],
+  "paired_bootstrap": [
+    {
+      "methodA": "lightgcn_average",
+      "methodB": "popularity",
+      "metric": "minimumNDCG@10",
+      "commonPairs": 195,
+      "meanDifferenceAminusB": 0.004567589174598272,
+      "ci95Lower": -0.0032291097279477762,
+      "ci95Upper": 0.012524173684232694,
+      "bootstrapProbabilityAboveZero": 0.8804,
+      "resamples": 10000,
+      "randomSeed": 20260828
+    },
+    {
+      "methodA": "item_knn_average",
+      "methodB": "popularity",
+      "metric": "minimumNDCG@10",
+      "commonPairs": 195,
+      "meanDifferenceAminusB": 0.007500354992431532,
+      "ci95Lower": 0.0005447041849141056,
+      "ci95Upper": 0.014834868510891342,
+      "bootstrapProbabilityAboveZero": 0.9817,
+      "resamples": 10000,
+      "randomSeed": 20260828
+    },
+    {
+      "methodA": "item_knn_average",
+      "methodB": "lightgcn_average",
+      "metric": "minimumNDCG@10",
+      "commonPairs": 195,
+      "meanDifferenceAminusB": 0.00293276581783326,
+      "ci95Lower": -0.005166023969318407,
+      "ci95Upper": 0.011263564232484499,
+      "bootstrapProbabilityAboveZero": 0.7525,
+      "resamples": 10000,
+      "randomSeed": 20260828
+    },
+    {
+      "methodA": "lightgcn_average",
+      "methodB": "popularity",
+      "metric": "averageNDCG@10",
+      "commonPairs": 195,
+      "meanDifferenceAminusB": 0.012937354037687252,
+      "ci95Lower": 0.0003528959667141565,
+      "ci95Upper": 0.025585991531666186,
+      "bootstrapProbabilityAboveZero": 0.9784,
+      "resamples": 10000,
+      "randomSeed": 20260828
+    },
+    {
+      "methodA": "item_knn_average",
+      "methodB": "popularity",
+      "metric": "averageNDCG@10",
+      "commonPairs": 195,
+      "meanDifferenceAminusB": 0.01414132591355233,
+      "ci95Lower": 0.003979506701270754,
+      "ci95Upper": 0.02456461566756993,
+      "bootstrapProbabilityAboveZero": 0.998,
+      "resamples": 10000,
+      "randomSeed": 20260828
+    },
+    {
+      "methodA": "item_knn_average",
+      "methodB": "lightgcn_average",
+      "metric": "averageNDCG@10",
+      "commonPairs": 195,
+      "meanDifferenceAminusB": 0.001203971875865081,
+      "ci95Lower": -0.01059731960371376,
+      "ci95Upper": 0.013263953969561716,
+      "bootstrapProbabilityAboveZero": 0.5816,
+      "resamples": 10000,
+      "randomSeed": 20260828
+    }
+  ],
+  "similarity_subgroup_rule": {
+    "feature": "pre-2019 centered genre-profile cosine similarity",
+    "cutoffs_source": "development pairs only",
+    "lower_tertile": 0.07356783499320341,
+    "upper_tertile": 0.34908834099769576,
+    "labels": {
+      "high_conflict": "similarity <= 0.073568",
+      "mixed": "0.073568 < similarity <= 0.349088",
+      "similar": "similarity > 0.349088"
+    },
+    "role": "post-hoc descriptive analysis; never used to select pairs or models"
+  },
+  "similarity_subgroups": [
+    {
+      "similarityBand": "similar",
+      "method": "popularity",
+      "evaluatedPairs": 78,
+      "meanMinimumNDCG": 0.031712676463404074,
+      "meanAverageNDCG": 0.11547589309911512,
+      "meanMinimumRecall": 0.008218411543755286,
+      "meanAverageRecall": 0.047677212249187195
+    },
+    {
+      "similarityBand": "high_conflict",
+      "method": "popularity",
+      "evaluatedPairs": 54,
+      "meanMinimumNDCG": 0.010910103705981465,
+      "meanAverageNDCG": 0.06429206048491969,
+      "meanMinimumRecall": 0.0025097641548289607,
+      "meanAverageRecall": 0.020478017742966387
+    },
+    {
+      "similarityBand": "mixed",
+      "method": "popularity",
+      "evaluatedPairs": 63,
+      "meanMinimumNDCG": 0.03190265651854721,
+      "meanAverageNDCG": 0.09873752122970533,
+      "meanMinimumRecall": 0.008349372355711733,
+      "meanAverageRecall": 0.0397348465113463
+    },
+    {
+      "similarityBand": "similar",
+      "method": "lightgcn_average",
+      "evaluatedPairs": 78,
+      "meanMinimumNDCG": 0.03533629980464741,
+      "meanAverageNDCG": 0.12788316284185441,
+      "meanMinimumRecall": 0.007837107553600606,
+      "meanAverageRecall": 0.05318133520050578
+    },
+    {
+      "similarityBand": "high_conflict",
+      "method": "lightgcn_average",
+      "evaluatedPairs": 54,
+      "meanMinimumNDCG": 0.016486292030476864,
+      "meanAverageNDCG": 0.09263167155923868,
+      "meanMinimumRecall": 0.008849940482469692,
+      "meanAverageRecall": 0.05105775205307134
+    },
+    {
+      "similarityBand": "mixed",
+      "method": "lightgcn_average",
+      "evaluatedPairs": 63,
+      "meanMinimumNDCG": 0.03677445173929215,
+      "meanAverageNDCG": 0.09912923550592952,
+      "meanMinimumRecall": 0.008687814399359936,
+      "meanAverageRecall": 0.03518936141930673
+    },
+    {
+      "similarityBand": "similar",
+      "method": "item_knn_average",
+      "evaluatedPairs": 78,
+      "meanMinimumNDCG": 0.04523245553012424,
+      "meanAverageNDCG": 0.13632621595359667,
+      "meanMinimumRecall": 0.00973793690180562,
+      "meanAverageRecall": 0.054514917010310276
+    },
+    {
+      "similarityBand": "high_conflict",
+      "method": "item_knn_average",
+      "evaluatedPairs": 54,
+      "meanMinimumNDCG": 0.006899828779830051,
+      "meanAverageNDCG": 0.0745651937778779,
+      "meanMinimumRecall": 0.0026583084210202858,
+      "meanAverageRecall": 0.028487802537508516
+    },
+    {
+      "similarityBand": "mixed",
+      "method": "item_knn_average",
+      "evaluatedPairs": 63,
+      "meanMinimumNDCG": 0.04181664544445439,
+      "meanAverageNDCG": 0.10788806365309261,
+      "meanMinimumRecall": 0.008441766281269383,
+      "meanAverageRecall": 0.037810959781984274
+    }
+  ],
+  "limitations": [
+    "Synthetic pairs and individual future ratings approximate joint satisfaction.",
+    "The graph contains 5,000 users rather than all MovieLens 32M users.",
+    "The same 2020+ calendar period was examined for earlier, excluded users; this holdout cohort itself is user-disjoint and was frozen without test activity.",
+    "Missing ratings remain unknown rather than confirmed dislikes.",
+    "One pairing seed and one model-training seed were used."
+  ]
+}

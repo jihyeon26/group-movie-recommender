@@ -1,0 +1,109 @@
+{
+  "status": "frozen_before_holdout_test",
+  "holdout_labels_loaded": false,
+  "selection_rule": "Fixed prior hyperparameters; select LightGCN checkpoint on development-user 2019 minimum NDCG@10, then average NDCG@10.",
+  "lightgcn": {
+    "config": {
+      "embedding_dim": 32,
+      "num_layers": 2,
+      "steps": 2500,
+      "batch_size": 8192,
+      "learning_rate": 0.02,
+      "l2_weight": 0.0001,
+      "random_seed": 20260828
+    },
+    "best_step": 700,
+    "stopped_step": 1500,
+    "early_stopped": true,
+    "validation_selected": true,
+    "selection_smoothing": 3,
+    "patience": 8,
+    "elapsed_seconds": 146.3336927079945
+  },
+  "item_knn": {
+    "neighbors": 100,
+    "shrinkage": 10.0,
+    "elapsed_seconds": 38.521561874993495
+  },
+  "development_protocol": {
+    "period": "validation",
+    "history_splits": [
+      "train"
+    ],
+    "pairs": 300,
+    "two_sided_evaluable_pairs": 297,
+    "candidate_movies": 16923,
+    "pair_target_coverage_after_filtering": 0.6494034526428047,
+    "member_count": 600,
+    "pair_memberships": 600
+  },
+  "development_methods": [
+    {
+      "method": "popularity",
+      "k": 10,
+      "evaluated_pairs": 297,
+      "skipped_pairs_without_two_sided_relevance": 3,
+      "meanAverageNDCG@10": 0.044906050737362244,
+      "meanMinimumNDCG@10": 0.006408011447356395,
+      "meanNDCGGap@10": 0.0769960785800117,
+      "meanAverageRecall@10": 0.02417711880420016,
+      "meanMinimumRecall@10": 0.0035408975019394773,
+      "catalogueCoverage@10": 0.015127341487915854,
+      "uniqueRecommendedItems@10": 256,
+      "twoSidedHitPairRate": 0.050505050505050504,
+      "oneSidedHitPairRate": 0.3602693602693603,
+      "noHitPairRate": 0.5892255892255892
+    },
+    {
+      "method": "lightgcn_average",
+      "conflict_weight": 0.0,
+      "k": 10,
+      "evaluated_pairs": 297,
+      "skipped_pairs_without_two_sided_relevance": 3,
+      "meanAverageNDCG@10": 0.057746391628754626,
+      "meanMinimumNDCG@10": 0.011176178808629799,
+      "meanNDCGGap@10": 0.09314042564024963,
+      "meanAverageRecall@10": 0.03340467685672755,
+      "meanMinimumRecall@10": 0.007255270797900659,
+      "catalogueCoverage@10": 0.038645630207410034,
+      "uniqueRecommendedItems@10": 654,
+      "twoSidedHitPairRate": 0.09764309764309764,
+      "oneSidedHitPairRate": 0.4006734006734007,
+      "noHitPairRate": 0.5016835016835017
+    },
+    {
+      "method": "item_knn_average",
+      "conflict_weight": 0.0,
+      "k": 10,
+      "evaluated_pairs": 297,
+      "skipped_pairs_without_two_sided_relevance": 3,
+      "meanAverageNDCG@10": 0.0585022998403388,
+      "meanMinimumNDCG@10": 0.010352263692316841,
+      "meanNDCGGap@10": 0.09630007229604394,
+      "meanAverageRecall@10": 0.03340742028480346,
+      "meanMinimumRecall@10": 0.005710979214509535,
+      "catalogueCoverage@10": 0.018200082727648764,
+      "uniqueRecommendedItems@10": 308,
+      "twoSidedHitPairRate": 0.07407407407407407,
+      "oneSidedHitPairRate": 0.4208754208754209,
+      "noHitPairRate": 0.5050505050505051
+    }
+  ],
+  "similarity_subgroup_rule": {
+    "feature": "pre-2019 centered genre-profile cosine similarity",
+    "cutoffs_source": "development pairs only",
+    "lower_tertile": 0.07356783499320341,
+    "upper_tertile": 0.34908834099769576,
+    "labels": {
+      "high_conflict": "similarity <= 0.073568",
+      "mixed": "0.073568 < similarity <= 0.349088",
+      "similar": "similarity > 0.349088"
+    },
+    "role": "post-hoc descriptive analysis; never used to select pairs or models"
+  },
+  "file_sha256": {
+    "lightgcn_embeddings.npz": "25eac9c58517c0f043bd30730b9e4d3328c64dec648864a42e5ebcb3f500f79f",
+    "item_knn.npz": "19638c9ae0d8c20389c70d8cdb930286e032451df712d4d24c8d6f144be89c10"
+  },
+  "boundary_action": "The selected checkpoint is interior; holdout evaluation is allowed."
+}

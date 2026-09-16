@@ -22,6 +22,24 @@ dist/
 /outputs/*
 !/outputs/.gitkeep
 
+# Keep the small, machine-readable results behind the report. Model artifacts,
+# bulk MovieLens edges, and recommendation dumps stay out: they are large and
+# regenerable from the committed configuration.
+!/outputs/final_holdout_converged/
+/outputs/final_holdout_converged/*
+!/outputs/final_holdout_converged/protocol.json
+!/outputs/final_holdout_converged/selection.json
+!/outputs/final_holdout_converged/resolved_config.json
+!/outputs/final_holdout_converged/preprocessing_config.json
+!/outputs/final_holdout_converged/development_comparison.csv
+!/outputs/final_holdout_converged/lightgcn_training_history.csv.gz
+!/outputs/final_holdout_converged/holdout/
+/outputs/final_holdout_converged/holdout/*
+!/outputs/final_holdout_converged/holdout/holdout_report.json
+!/outputs/final_holdout_converged/holdout/comparison.csv
+!/outputs/final_holdout_converged/holdout/similarity_subgroups.csv
+!/outputs/final_holdout_converged/holdout/pair_metrics.csv.gz
+
 # Local temporary files
 /tmp/
 *.log
