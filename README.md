@@ -65,10 +65,14 @@ Download MovieLens 32M separately into the ignored `dataset/movie_lens32m/`
 python scripts/check_data.py
 python scripts/prepare_data.py
 
-python scripts/run_final_holdout_experiment.py prepare --config configs/final_holdout_experiment_converged.json --output-root outputs/final_holdout_converged
-python scripts/run_final_holdout_experiment.py train --output-root outputs/final_holdout_converged
-python scripts/run_final_holdout_experiment.py test --output-root outputs/final_holdout_converged
+python scripts/run_final_holdout_experiment.py prepare --config configs/final_holdout_experiment_converged.json --output-root outputs/final_holdout_reproduction
+python scripts/run_final_holdout_experiment.py train --output-root outputs/final_holdout_reproduction
+python scripts/run_final_holdout_experiment.py test --output-root outputs/final_holdout_reproduction
 ```
+
+Use a new, empty output root for each reproduction. The committed
+`outputs/final_holdout_converged/` directory is the reference result snapshot
+and is intentionally not overwritten.
 
 The test phase verifies the frozen cohort and model hashes, refuses a checkpoint
 selected at the training-budget boundary, and refuses to overwrite an existing
