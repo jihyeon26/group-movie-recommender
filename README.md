@@ -4,8 +4,7 @@ A reproducible MovieLens 32M experiment that recommends one shared Top-10 list t
 two users, comparing global popularity, ItemKNN, and LightGCN on randomly
 sampled, member-disjoint pairs.
 
-**Research question.** Do LightGCN and ItemKNN improve group recommendation
-quality over a popularity baseline, particularly for the less-satisfied member?
+**Research question.** Do LightGCN and ItemKNN improve NDCG@10 over a popularity baseline for two-user group recommendation, particularly for the less-satisfied member, and what trade-offs do they create in recall and catalogue coverage?
 
 ## Result
 
@@ -106,8 +105,3 @@ Tests use small synthetic inputs and do not require MovieLens files.
 - Missing ratings are unknown, not confirmed dislikes.
 - One pair-sampling seed and one training seed.
 
-## License
-
-MIT for the code; see `LICENSE`. The committed experiment outputs are MovieLens
-32M derivatives redistributed under the GroupLens usage license. MovieLens is
-not included here and must be downloaded separately.
